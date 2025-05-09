@@ -52,3 +52,36 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+# Build outputs
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.sln.docstates
+.vscode/
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# Database files
+*.mdf
+*.ldf
+*.bak
+*.sql
+*.dump
+
+# Configuration files 
+appsettings.Development.json
+appsettings.*.json
+
+# Environment files
+.env
+docker-compose.override.yml
+
+# Node.js frontend 
+node_modules/
+dist/

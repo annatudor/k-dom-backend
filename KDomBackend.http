@@ -1,0 +1,6 @@
+@KDomBackend_HostAddress = http://localhost:5036
+
+GET {{KDomBackend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
