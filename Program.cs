@@ -1,4 +1,6 @@
+using Dapper;
 using KDomBackend.Data;
+using KDomBackend.Enums;
 using KDomBackend.Helpers;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
@@ -20,9 +22,17 @@ builder.Services.AddSingleton<IMongoClient>(sp =>
     var settings = sp.GetRequiredService<IOptions<MongoDbSettings>>().Value;
     return new MongoClient(settings.ConnectionString);
 });
+
 builder.Services.AddSingleton<DatabaseContext>();
+builder.Services.Configure<MongoDbSettings>(
+    builder.Configuration.GetSection("MongoDbSettings"));
 
+builder.Services.AddSingleton<MongoDbContext>();
 
+SqlMapper.AddTypeHandler(new EnumAsStringHandler<ContentType>());
+SqlMapper.AddTypeHandler(new EnumAsStringHandler<AuditTargetType>());
+
+// var cleanHtml = HtmlSanitizerHelper.Sanitize(userInputHtml);
 
 var app = builder.Build();
 
