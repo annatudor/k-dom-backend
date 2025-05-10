@@ -85,3 +85,6 @@ docker-compose.override.yml
 # Node.js frontend 
 node_modules/
 dist/
+
+
+.vs/
