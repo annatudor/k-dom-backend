@@ -88,3 +88,5 @@ dist/
 
 
 .vs/
+appsettings.*.json
+appsettings.json

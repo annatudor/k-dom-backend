@@ -1,0 +1,17 @@
+﻿using KDomBackend.Models.Entities;
+
+namespace KDomBackend.Repositories.Interfaces
+{
+    public interface IUserRepository
+    {
+        Task<User?> GetByEmailAsync(string email);
+        Task<User?> GetByUsernameAsync(string username);
+        Task<User?> GetByIdAsync(int id);
+        Task<int> CreateAsync(User user);
+        Task<bool> ExistsByEmailAsync(string email);
+        Task<bool> ExistsByUsernameAsync(string username);
+        Task UpdatePasswordAsync(int userId, string newHashedPassword);
+        Task<User?> GetByProviderIdAsync(string provider, string providerId);
+
+    }
+}

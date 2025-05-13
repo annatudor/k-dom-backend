@@ -1,8 +1,14 @@
 using Dapper;
+using System.Text;
 using KDomBackend.Data;
 using KDomBackend.Enums;
 using KDomBackend.Helpers;
+using KDomBackend.Repositories.Implementations;
+using KDomBackend.Repositories.Interfaces;
+using KDomBackend.Services.Implementations;
+using KDomBackend.Services.Interfaces;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -29,8 +35,47 @@ builder.Services.Configure<MongoDbSettings>(
 
 builder.Services.AddSingleton<MongoDbContext>();
 
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IPasswordResetRepository, PasswordResetRepository>();
+builder.Services.AddScoped<IGoogleAuthService, GoogleAuthService>();
+
+
+
+builder.Services.Configure<JwtSettings>(
+    builder.Configuration.GetSection("Jwt"));
+builder.Services.AddSingleton(sp =>
+    sp.GetRequiredService<IOptions<JwtSettings>>().Value);
+builder.Services.AddScoped<JwtHelper>();
+builder.Services.Configure<GoogleOAuthSettings>(
+    builder.Configuration.GetSection("GoogleOAuth"));
+
+
+
 SqlMapper.AddTypeHandler(new EnumAsStringHandler<ContentType>());
 SqlMapper.AddTypeHandler(new EnumAsStringHandler<AuditTargetType>());
+
+var jwtConfig = builder.Configuration.GetSection("Jwt");
+var key = Encoding.UTF8.GetBytes(jwtConfig["SecretKey"]);
+
+builder.Services.AddAuthentication("Bearer")
+    .AddJwtBearer("Bearer", options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtConfig["Issuer"],
+            ValidateAudience = true,
+            ValidAudience = jwtConfig["Issuer"],
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(key)
+        };
+    });
+
+
+builder.Services.AddAuthorization();
+
 
 // var cleanHtml = HtmlSanitizerHelper.Sanitize(userInputHtml);
 
@@ -45,6 +90,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
