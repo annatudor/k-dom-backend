@@ -1,9 +1,15 @@
-﻿namespace KDomBackend.Models.DTOs.KDom
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace KDomBackend.Models.DTOs.KDom
 {
     public class KDomEditDto
     {
+        [Required]
         public string KDomId { get; set; } = string.Empty;
+
+        [Required]
         public string ContentHtml { get; set; } = string.Empty;
+
         public string? EditNote { get; set; }
         public bool IsMinor { get; set; } = false;
     }

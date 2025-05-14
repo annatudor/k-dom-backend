@@ -27,5 +27,8 @@ namespace KDomBackend.Data
         public IMongoCollection<KDomEdit> KDomEdits => _database.GetCollection<KDomEdit>("kdom_edits");
         public IMongoCollection<PostEdit> PostEdits => _database.GetCollection<PostEdit>("post_edits");
         public IMongoCollection<CommentEdit> CommentEdits => _database.GetCollection<CommentEdit>("comment_edits");
+        public IMongoCollection<KDomMetadataEdit> KDomMetadataEdits =>
+                    _database.GetCollection<KDomMetadataEdit>("kdom_metadata_edits");
+
     }
 }

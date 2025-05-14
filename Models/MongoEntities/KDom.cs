@@ -21,5 +21,7 @@ namespace KDomBackend.Models.MongoEntities
         public int UserId { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? LastEditedtAt { get; set; }
+        public DateTime? UpdatedAt { get; set; } = DateTime.UtcNow;
+
     }
 }

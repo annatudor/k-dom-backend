@@ -39,6 +39,9 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPasswordResetRepository, PasswordResetRepository>();
 builder.Services.AddScoped<IGoogleAuthService, GoogleAuthService>();
+builder.Services.AddScoped<IKDomRepository, KDomRepository>();
+builder.Services.AddScoped<IKDomService, KDomService>();
+
 
 
 
@@ -75,9 +78,6 @@ builder.Services.AddAuthentication("Bearer")
 
 
 builder.Services.AddAuthorization();
-
-
-// var cleanHtml = HtmlSanitizerHelper.Sanitize(userInputHtml);
 
 var app = builder.Build();
 
