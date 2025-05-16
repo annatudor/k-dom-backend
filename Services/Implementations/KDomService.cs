@@ -10,13 +10,14 @@ namespace KDomBackend.Services.Implementations
     public class KDomService : IKDomService
     {
         private readonly IKDomRepository _kdomRepository;
-        private readonly IUserRepository _userRepository;
+        private readonly IUserService _userService;
 
-        public KDomService(IKDomRepository kdomRepository, IUserRepository userRepository)
+        public KDomService(IKDomRepository kdomRepository, IUserService userService)
         {
             _kdomRepository = kdomRepository;
-            _userRepository = userRepository;
+            _userService = userService;
         }
+
 
         public async Task CreateKDomAsync(KDomCreateDto dto, int userId)
         {
@@ -115,8 +116,8 @@ namespace KDomBackend.Services.Implementations
             if (kdom == null)
                 throw new Exception("KDom not found.");
 
-            var user = await _userRepository.GetByIdAsync(kdom.UserId); 
-            var username = user?.Username ?? "unknown";
+            var username = await _userService.GetUsernameByUserIdAsync(kdom.UserId);
+
 
             return new KDomReadDto
             {

@@ -9,6 +9,7 @@ namespace KDomBackend.Services.Interfaces
         Task ChangePasswordAsync(int userId, ChangePasswordDto dto);
         Task RequestPasswordResetAsync(ForgotPasswordDto dto);
         Task ResetPasswordAsync(ResetPasswordDto dto);
+        Task<string> GetUsernameByUserIdAsync(int userId);
 
 
     }

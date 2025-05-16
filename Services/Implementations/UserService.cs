@@ -121,7 +121,10 @@ namespace KDomBackend.Services.Implementations
             await _userRepository.UpdatePasswordAsync(user.Id, newHashed);
             await _passwordResetRepository.MarkAsUsedAsync(tokenRecord.Id);
         }
-
-
+        public async Task<string> GetUsernameByUserIdAsync(int userId)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            return user?.Username ?? "unknown";
+        }
     }
 }

@@ -1,9 +1,10 @@
-﻿namespace KDomBackend.Models.DTOs.Comment
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace KDomBackend.Models.DTOs.Comment
 {
     public class CommentEditDto
     {
-        public string CommentId { get; set; } = string.Empty;
+        [Required]
         public string Text { get; set; } = string.Empty;
     }
-
 }

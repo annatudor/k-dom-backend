@@ -1,11 +1,20 @@
-﻿namespace KDomBackend.Models.DTOs.Comment
-{
-        public class CommentCreateDto
-        {
-            public string TargetId { get; set; } = string.Empty;
-            public string TargetType { get; set; } = "post"; // sau "kdom"
-            public string Text { get; set; } = string.Empty;
-            public string? ParentCommentId { get; set; } // null daca e root
-        }
+﻿using System.ComponentModel.DataAnnotations;
+using KDomBackend.Enums;
 
+namespace KDomBackend.Models.DTOs.Comment
+{
+    public class CommentCreateDto
+    {
+        [Required]
+        public CommentTargetType TargetType { get; set; }
+
+        [Required]
+        public string TargetId { get; set; } = string.Empty;
+
+        [Required]
+        [MinLength(1)]
+        public string Text { get; set; } = string.Empty;
+
+        public string? ParentCommentId { get; set; }
+    }
 }

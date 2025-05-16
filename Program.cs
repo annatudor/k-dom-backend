@@ -41,8 +41,8 @@ builder.Services.AddScoped<IPasswordResetRepository, PasswordResetRepository>();
 builder.Services.AddScoped<IGoogleAuthService, GoogleAuthService>();
 builder.Services.AddScoped<IKDomRepository, KDomRepository>();
 builder.Services.AddScoped<IKDomService, KDomService>();
-
-
+builder.Services.AddScoped<ICommentRepository, CommentRepository>();
+builder.Services.AddScoped<ICommentService, CommentService>();
 
 
 builder.Services.Configure<JwtSettings>(

@@ -14,6 +14,11 @@ namespace KDomBackend.Repositories.Implementations
         {
             _context = context;
         }
+        public async Task<string> GetUsernameByUserIdAsync(int userId)
+        {
+            var user = await GetByIdAsync(userId);
+            return user?.Username ?? "deleted user";
+        }
 
         public async Task<User?> GetByEmailAsync(string email)
         {
