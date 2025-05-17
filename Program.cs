@@ -43,7 +43,8 @@ builder.Services.AddScoped<IKDomRepository, KDomRepository>();
 builder.Services.AddScoped<IKDomService, KDomService>();
 builder.Services.AddScoped<ICommentRepository, CommentRepository>();
 builder.Services.AddScoped<ICommentService, CommentService>();
-
+builder.Services.AddScoped<IPostRepository, PostRepository>();
+builder.Services.AddScoped<IPostService, PostService>();
 
 builder.Services.Configure<JwtSettings>(
     builder.Configuration.GetSection("Jwt"));

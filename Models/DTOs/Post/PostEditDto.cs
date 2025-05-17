@@ -1,9 +1,12 @@
-﻿namespace KDomBackend.Models.DTOs.Post
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace KDomBackend.Models.DTOs.Post
 {
     public class PostEditDto
     {
-        public string PostId { get; set; } = string.Empty;
+        [Required]
         public string ContentHtml { get; set; } = string.Empty;
-    }
 
+        public List<string> Tags { get; set; } = new();
+    }
 }
