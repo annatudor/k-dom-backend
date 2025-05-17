@@ -1,22 +1,27 @@
-﻿using MongoDB.Bson.Serialization.Attributes;
+﻿using KDomBackend.Enums;
+using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson;
-using KDomBackend.Enums;
 
-namespace KDomBackend.Models.MongoEntities
+public class Notification
 {
-    public class Notification
-    {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string Id { get; set; } = string.Empty;
+    [BsonId]
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string Id { get; set; } = string.Empty;
 
-        public int UserId { get; set; }
-        
-        [BsonRepresentation(BsonType.String)]
-        public NotificationType Type { get; set; }
+    public int UserId { get; set; } // cui i se adreseaza
 
-        public string Message { get; set; } = string.Empty;
-        public bool IsRead { get; set; } = false;
-        public DateTime CreatedAt { get; set; }
-    }
+    [BsonRepresentation(BsonType.String)]
+    public NotificationType Type { get; set; }
+
+    public string Message { get; set; } = string.Empty;
+
+    public bool IsRead { get; set; } = false;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public int? TriggeredByUserId { get; set; } // cine a declansat notificarea 
+
+    [BsonRepresentation(BsonType.String)]
+    public ContentType? TargetType { get; set; }
+
+    public string? TargetId { get; set; } = null;
 }
