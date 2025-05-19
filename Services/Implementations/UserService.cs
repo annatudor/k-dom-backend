@@ -6,6 +6,7 @@ using KDomBackend.Repositories.Interfaces;
 using KDomBackend.Repositories.Implementations;
 using KDomBackend.Services.Interfaces;
 using BCrypt.Net;
+using KDomBackend.Models.MongoEntities;
 
 namespace KDomBackend.Services.Implementations
 {
@@ -14,12 +15,22 @@ namespace KDomBackend.Services.Implementations
         private readonly IUserRepository _userRepository;
         private readonly JwtHelper _jwtHelper;
         private readonly IPasswordResetRepository _passwordResetRepository;
+        private readonly IUserProfileRepository _profileRepository;
+        private readonly IFollowRepository _followRepository;
 
-        public UserService(IUserRepository userRepository, JwtHelper jwtHelper, IPasswordResetRepository passwordResetRepository)
+        public UserService(
+            IUserRepository userRepository, 
+            JwtHelper jwtHelper, 
+            IPasswordResetRepository passwordResetRepository,
+            IUserProfileRepository profileRepository, 
+            IFollowRepository followRepository
+            )
         {
             _userRepository = userRepository;
             _jwtHelper = jwtHelper;
             _passwordResetRepository = passwordResetRepository;
+            _profileRepository = profileRepository;
+            _followRepository = followRepository;
         }
 
 
@@ -126,5 +137,59 @@ namespace KDomBackend.Services.Implementations
             var user = await _userRepository.GetByIdAsync(userId);
             return user?.Username ?? "unknown";
         }
+
+        public async Task<UserProfileDto> GetUserProfileAsync(int userId)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+                throw new Exception("User not found.");
+
+            var profile = await _profileRepository.GetProfileByUserIdAsync(userId);
+
+            var followersCount = await _followRepository.GetFollowersCountAsync(userId);
+            var followingCount = await _followRepository.GetFollowingCountAsync(userId);
+
+            return new UserProfileDto
+            {
+                UserId = user.Id,
+                Username = user.Username,
+                Nickname = profile?.Nickname ?? "",
+                AvatarUrl = profile?.AvatarUrl ?? "",
+                Bio = profile?.Bio ?? "",
+                FollowersCount = followersCount,
+                FollowingCount = followingCount,
+                JoinedAt = user.CreatedAt
+            };
+        }
+
+        public async Task UpdateProfileAsync(int userId, UserProfileUpdateDto dto)
+        {
+            var profile = await _profileRepository.GetProfileByUserIdAsync(userId);
+
+            if (profile == null)
+            {
+                profile = new UserProfile
+                {
+                    UserId = userId,
+                    Nickname = dto.Nickname,
+                    Bio = dto.Bio,
+                    AvatarUrl = dto.AvatarUrl,
+                    JoinedAt = DateTime.UtcNow
+                };
+
+                await _profileRepository.CreateAsync(profile);
+            }
+            else
+            {
+                profile.Nickname = dto.Nickname;
+                profile.Bio = dto.Bio;
+                profile.AvatarUrl = dto.AvatarUrl;
+
+                await _profileRepository.UpdateAsync(profile);
+            }
+        }
+
+
+
     }
 }

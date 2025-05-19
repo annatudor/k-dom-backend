@@ -56,6 +56,8 @@ builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IFollowRepository, FollowRepository>();
 builder.Services.AddScoped<IFollowService, FollowService>();
+builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
+
 
 
 var jwtConfig = builder.Configuration.GetSection("Jwt");
