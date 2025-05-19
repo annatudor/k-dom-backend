@@ -11,6 +11,9 @@ namespace KDomBackend.Services.Interfaces
         Task EditPostAsync(string postId, PostEditDto dto, int userId);
         Task DeletePostAsync(string postId, int userId);
         Task<List<PostReadDto>> GetPostsByUserIdAsync(int userId);
+        Task<List<PostReadDto>> GetFeedAsync(int userId);
+        Task<List<PostReadDto>> GetGuestFeedAsync(int limit = 30);
+
 
     }
 }

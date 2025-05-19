@@ -1,6 +1,7 @@
 ﻿using KDomBackend.Helpers;
 using KDomBackend.Models.DTOs.Post;
 using KDomBackend.Models.MongoEntities;
+using KDomBackend.Repositories.Implementations;
 using KDomBackend.Repositories.Interfaces;
 using KDomBackend.Services.Interfaces;
 
@@ -10,11 +11,13 @@ namespace KDomBackend.Services.Implementations
     {
         private readonly IPostRepository _repository;
         private readonly IUserService _userService;
+        private readonly IFollowRepository _followRepository;
 
-        public PostService(IPostRepository repository, IUserService userService)
+        public PostService(IPostRepository repository, IUserService userService, IFollowRepository followRepository)
         {
             _repository = repository;
             _userService = userService;
+            _followRepository = followRepository;
         }
 
 
@@ -150,6 +153,61 @@ namespace KDomBackend.Services.Implementations
                 LikeCount = p.Likes.Count
             }).ToList();
         }
+
+        public async Task<List<PostReadDto>> GetFeedAsync(int userId)
+        {
+            var followedUserIds = await _followRepository.GetFollowingAsync(userId);
+            var posts = await _repository.GetFeedPostsAsync(followedUserIds);
+
+            var result = new List<PostReadDto>();
+
+            foreach (var post in posts)
+            {
+                var username = await _userService.GetUsernameByUserIdAsync(post.UserId);
+
+                result.Add(new PostReadDto
+                {
+                    Id = post.Id,
+                    ContentHtml = post.ContentHtml,
+                    Tags = post.Tags,
+                    UserId = post.UserId,
+                    Username = username,
+                    CreatedAt = post.CreatedAt,
+                    IsEdited = post.IsEdited,
+                    EditedAt = post.EditedAt,
+                    LikeCount = post.Likes.Count
+                });
+            }
+
+            return result;
+        }
+
+        public async Task<List<PostReadDto>> GetGuestFeedAsync(int limit = 30)
+        {
+            var posts = await _repository.GetPublicPostsAsync(limit);
+            var result = new List<PostReadDto>();
+
+            foreach (var post in posts)
+            {
+                var username = await _userService.GetUsernameByUserIdAsync(post.UserId);
+
+                result.Add(new PostReadDto
+                {
+                    Id = post.Id,
+                    ContentHtml = post.ContentHtml,
+                    Tags = post.Tags,
+                    UserId = post.UserId,
+                    Username = username,
+                    CreatedAt = post.CreatedAt,
+                    IsEdited = post.IsEdited,
+                    EditedAt = post.EditedAt,
+                    LikeCount = post.Likes.Count
+                });
+            }
+
+            return result;
+        }
+
 
 
     }

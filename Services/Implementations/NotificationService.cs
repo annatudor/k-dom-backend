@@ -1,6 +1,8 @@
-﻿using KDomBackend.Models.DTOs.Notification;
+﻿using KDomBackend.Hubs;
+using KDomBackend.Models.DTOs.Notification;
 using KDomBackend.Repositories.Interfaces;
 using KDomBackend.Services.Interfaces;
+using Microsoft.AspNetCore.SignalR;
 
 namespace KDomBackend.Services.Implementations
 {
@@ -8,12 +10,19 @@ namespace KDomBackend.Services.Implementations
     {
         private readonly INotificationRepository _repository;
         private readonly IUserService _userService;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public NotificationService(INotificationRepository repository, IUserService userService)
+
+        public NotificationService(
+            INotificationRepository repository,
+            IUserService userService,
+            IHubContext<NotificationHub> hubContext)
         {
             _repository = repository;
             _userService = userService;
+            _hubContext = hubContext;
         }
+
 
         public async Task CreateNotificationAsync(NotificationCreateDto dto)
         {
@@ -30,6 +39,26 @@ namespace KDomBackend.Services.Implementations
             };
 
             await _repository.CreateAsync(notification);
+
+            try
+            {
+                await _hubContext
+                    .Clients
+                    .User(notification.UserId.ToString())
+                    .SendAsync("ReceiveNotification", new
+                    {
+                        notification.Type,
+                        notification.Message,
+                        notification.TriggeredByUserId,
+                        notification.TargetType,
+                        notification.TargetId,
+                        notification.CreatedAt
+                    });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[SignalR] Failed to push notification: {ex.Message}");
+            }
         }
 
 

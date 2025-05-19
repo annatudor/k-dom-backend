@@ -11,6 +11,9 @@ namespace KDomBackend.Repositories.Interfaces
         Task UpdateAsync(string postId, string newHtml, List<string> newTags);
         Task DeleteAsync(string postId);
         Task<List<Post>> GetByUserIdAsync(int userId);
+        Task<List<Post>> GetFeedPostsAsync(List<int> followedUserIds, int limit = 30);
+        Task<List<Post>> GetPublicPostsAsync(int limit = 30);
+
 
     }
 }

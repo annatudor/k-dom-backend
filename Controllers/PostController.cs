@@ -121,6 +121,23 @@ namespace KDomBackend.Controllers
             return Ok(posts);
         }
 
+        [Authorize]
+        [HttpGet("feed")]
+        public async Task<IActionResult> GetFeed()
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var posts = await _postService.GetFeedAsync(userId);
+            return Ok(posts);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("guest-feed")]
+        public async Task<IActionResult> GetGuestFeed([FromQuery] int limit = 30)
+        {
+            var posts = await _postService.GetGuestFeedAsync(limit);
+            return Ok(posts);
+        }
+
 
     }
 }

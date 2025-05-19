@@ -64,5 +64,40 @@ namespace KDomBackend.Repositories.Implementations
                 .ToListAsync();
         }
 
+        public async Task<List<Post>> GetFeedPostsAsync(List<int> followedUserIds, int limit = 30)
+        {
+            var filterFollowed = Builders<Post>.Filter.In(p => p.UserId, followedUserIds);
+            var filterOthers = Builders<Post>.Filter.Nin(p => p.UserId, followedUserIds);
+
+            var followedPostsTask = _collection
+                .Find(filterFollowed)
+                .SortByDescending(p => p.CreatedAt)
+                .Limit(limit / 2)
+                .ToListAsync();
+
+            var randomPostsTask = _collection
+                .Find(filterOthers)
+                .SortByDescending(p => p.CreatedAt)
+                .Limit(limit / 2)
+                .ToListAsync();
+
+            await Task.WhenAll(followedPostsTask, randomPostsTask);
+
+            return followedPostsTask.Result
+                .Concat(randomPostsTask.Result)
+                .OrderByDescending(p => p.CreatedAt)
+                .ToList();
+        }
+
+        public async Task<List<Post>> GetPublicPostsAsync(int limit = 30)
+        {
+            return await _collection
+                .Find(_ => true)
+                .SortByDescending(p => p.CreatedAt)
+                .Limit(limit)
+                .ToListAsync();
+        }
+
+
     }
 }
