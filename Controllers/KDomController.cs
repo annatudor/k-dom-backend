@@ -137,5 +137,32 @@ namespace KDomBackend.Controllers
             }
         }
 
+        [Authorize(Roles = "admin,moderator")]
+        [HttpGet("pending")]
+        public async Task<IActionResult> GetPending()
+        {
+            var result = await _kdomService.GetPendingKdomsAsync();
+            return Ok(result);
+        }
+
+        [Authorize(Roles = "admin,moderator")]
+        [HttpPost("{id}/approve")]
+        public async Task<IActionResult> Approve(string id)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            await _kdomService.ApproveKdomAsync(id, userId);
+            return Ok(new { message = "K-Dom approved." });
+        }
+
+        [Authorize(Roles = "admin,moderator")]
+        [HttpPost("{id}/reject")]
+        public async Task<IActionResult> Reject(string id, [FromBody] KDomRejectDto dto)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            await _kdomService.RejectKdomAsync(id, dto, userId);
+            return Ok(new { message = "K-Dom rejected." });
+        }
+
+
     }
 }

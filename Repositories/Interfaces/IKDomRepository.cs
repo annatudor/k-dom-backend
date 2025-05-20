@@ -12,6 +12,9 @@ namespace KDomBackend.Repositories.Interfaces
         Task SaveMetadataEditAsync(KDomMetadataEdit edit);
         Task<List<KDomEdit>> GetEditsByKDomIdAsync(string kdomId);
         Task<List<KDomMetadataEdit>> GetMetadataEditsByKDomIdAsync(string kdomId);
+        Task<List<KDom>> GetPendingKdomsAsync();
+        Task ApproveAsync(string kdomId);
+        Task RejectAsync(string kdomId, string reason);
 
     }
 }

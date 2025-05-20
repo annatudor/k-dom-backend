@@ -1,5 +1,8 @@
-﻿using KDomBackend.Helpers;
+﻿using KDomBackend.Enums;
+using KDomBackend.Helpers;
+using KDomBackend.Models.DTOs.Notification;
 using KDomBackend.Models.DTOs.Post;
+using KDomBackend.Models.Entities;
 using KDomBackend.Models.MongoEntities;
 using KDomBackend.Repositories.Implementations;
 using KDomBackend.Repositories.Interfaces;
@@ -12,12 +15,16 @@ namespace KDomBackend.Services.Implementations
         private readonly IPostRepository _repository;
         private readonly IUserService _userService;
         private readonly IFollowRepository _followRepository;
+        private readonly IAuditLogRepository _auditLogRepository;
+        private readonly INotificationService _notificationService;
 
-        public PostService(IPostRepository repository, IUserService userService, IFollowRepository followRepository)
+        public PostService(IPostRepository repository, IUserService userService, IFollowRepository followRepository, IAuditLogRepository auditLogRepository, INotificationService notificationService)
         {
             _repository = repository;
             _userService = userService;
             _followRepository = followRepository;
+            _auditLogRepository = auditLogRepository;
+            _notificationService = notificationService;
         }
 
 
@@ -123,17 +130,46 @@ namespace KDomBackend.Services.Implementations
             await _repository.UpdateAsync(postId, cleanHtml, dto.Tags);
         }
 
-        public async Task DeletePostAsync(string postId, int userId)
+        public async Task DeletePostAsync(string postId, int userId, bool isModerator)
         {
             var post = await _repository.GetByIdAsync(postId);
-            if (post == null)
-                throw new Exception("Post not found.");
+            if (post == null) throw new Exception("Post not found.");
 
-            if (post.UserId != userId)
-                throw new UnauthorizedAccessException("You cannot delete this post.");
+            // autorul are voie oricum
+            var isOwner = post.UserId == userId;
 
+            if (!isOwner && !isModerator)
+                throw new UnauthorizedAccessException("You cannot have permission to delete this post.");
+
+            // Ștergere postare
             await _repository.DeleteAsync(postId);
+
+            // Audit obligatoriu
+            await _auditLogRepository.CreateAsync(new AuditLog
+            {
+                UserId = userId,
+                Action = AuditAction.DeletePost,
+                TargetType = AuditTargetType.Post,
+                TargetId = postId,
+                CreatedAt = DateTime.UtcNow,
+                Details = isModerator ? "Deleted by moderator" : "Deleted by user"
+            });
+
+            // Notificare doar dacă e moderator
+            if (isModerator)
+            {
+                await _notificationService.CreateNotificationAsync(new NotificationCreateDto
+                {
+                    UserId = post.UserId,
+                    Type = NotificationType.SystemMessage,
+                    Message = "Your post has been deleted by a moderator.",
+                    TriggeredByUserId = userId,
+                    TargetType = ContentType.Post,
+                    TargetId = postId
+                });
+            }
         }
+
 
         public async Task<List<PostReadDto>> GetPostsByUserIdAsync(int userId)
         {

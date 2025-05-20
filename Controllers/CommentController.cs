@@ -76,11 +76,12 @@ namespace KDomBackend.Controllers
         public async Task<IActionResult> Delete(string id)
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var isModerator = User.IsInRole("admin") || User.IsInRole("moderator");
 
             try
             {
-                await _commentService.DeleteCommentAsync(id, userId);
-                return Ok(new { message = "Comment deleted successfully." });
+                await _commentService.DeleteCommentAsync(id, userId, isModerator);
+                return Ok(new { message = "Your comment has been deleted." });
             }
             catch (UnauthorizedAccessException)
             {
@@ -91,6 +92,7 @@ namespace KDomBackend.Controllers
                 return NotFound(new { error = ex.Message });
             }
         }
+
 
 
     }

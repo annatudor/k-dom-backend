@@ -59,7 +59,14 @@ builder.Services.AddScoped<IFollowService, FollowService>();
 builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
 builder.Services.AddScoped<IFlagRepository, FlagRepository>();
 builder.Services.AddScoped<IFlagService, FlagService>();
+builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 
+
+SqlMapper.AddTypeHandler(new EnumAsStringHandler<AuditAction>());
+SqlMapper.AddTypeHandler(new EnumAsStringHandler<AuditTargetType>());
+SqlMapper.AddTypeHandler(new EnumAsStringHandler<ContentType>());
+SqlMapper.AddTypeHandler(new EnumAsStringHandler<KDomBackend.Enums.AuditAction>());
 
 
 var jwtConfig = builder.Configuration.GetSection("Jwt");
@@ -102,10 +109,6 @@ builder.Services.AddAuthentication("Bearer")
 builder.Services.AddSignalR();
 builder.Services.AddAuthorization();
 builder.Services.AddSingleton<IUserIdProvider, NameIdentifierUserIdProvider>();
-
-
-SqlMapper.AddTypeHandler(new EnumAsStringHandler<ContentType>());
-SqlMapper.AddTypeHandler(new EnumAsStringHandler<AuditTargetType>());
 
 var app = builder.Build();
 

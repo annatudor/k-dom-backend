@@ -1,8 +1,8 @@
 ﻿using KDomBackend.Enums;
 
-namespace KDomBackend.Models.Entities
+namespace KDomBackend.Models.DTOs.Audit
 {
-    public class AuditLog
+    public class AuditLogReadDto
     {
         public int Id { get; set; }
         public int UserId { get; set; }

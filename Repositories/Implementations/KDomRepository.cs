@@ -79,5 +79,33 @@ namespace KDomBackend.Repositories.Implementations
                 .ToListAsync();
         }
 
+        public async Task<List<KDom>> GetPendingKdomsAsync()
+        {
+            var filter = Builders<KDom>.Filter.And(
+                Builders<KDom>.Filter.Eq(k => k.IsApproved, false),
+                Builders<KDom>.Filter.Eq(k => k.IsRejected, false)
+            );
+
+            return await _collection.Find(filter).SortBy(k => k.CreatedAt).ToListAsync();
+        }
+
+        public async Task ApproveAsync(string kdomId)
+        {
+            var update = Builders<KDom>.Update
+                .Set(k => k.IsApproved, true);
+
+            await _collection.UpdateOneAsync(k => k.Id == kdomId, update);
+        }
+
+        public async Task RejectAsync(string kdomId, string reason)
+        {
+            var update = Builders<KDom>.Update
+                .Set(k => k.IsRejected, true)
+                .Set(k => k.RejectionReason, reason);
+
+            await _collection.UpdateOneAsync(k => k.Id == kdomId, update);
+        }
+
+
     }
 }

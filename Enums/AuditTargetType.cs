@@ -2,8 +2,10 @@
 {
     public enum AuditTargetType
     {
+        Flag,
         Post,
         Comment,
-        KDom
+        KDom,
+        User
     }
 }

@@ -6,8 +6,7 @@ namespace KDomBackend.Services.Interfaces
     {
         Task CreateFlagAsync(int userId, FlagCreateDto dto);
         Task<List<FlagReadDto>> GetAllAsync();
-        Task ResolveAsync(int flagId);
-        Task DeleteAsync(int flagId);
-
+        Task ResolveAsync(int flagId, int userId);
+        Task DeleteAsync(int flagId, int userId);
     }
 }

@@ -40,7 +40,8 @@ public class FlagController : ControllerBase
     [HttpPost("{id}/resolve")]
     public async Task<IActionResult> Resolve(int id)
     {
-        await _flagService.ResolveAsync(id);
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        await _flagService.ResolveAsync(id, userId);
         return Ok(new { message = "Report marked as resolved." });
     }
 
@@ -48,7 +49,9 @@ public class FlagController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        await _flagService.DeleteAsync(id);
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        await _flagService.DeleteAsync(id, userId);
+
         return Ok(new { message = "Report deleted." });
     }
 

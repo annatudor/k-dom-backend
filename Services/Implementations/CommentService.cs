@@ -1,6 +1,8 @@
 ﻿using KDomBackend.Enums;
 using KDomBackend.Helpers;
 using KDomBackend.Models.DTOs.Comment;
+using KDomBackend.Models.DTOs.Notification;
+using KDomBackend.Models.Entities;
 using KDomBackend.Models.MongoEntities;
 using KDomBackend.Repositories.Interfaces;
 using KDomBackend.Services.Interfaces;
@@ -11,11 +13,16 @@ namespace KDomBackend.Services.Implementations
     {
         private readonly ICommentRepository _repository;
         private readonly IUserService _userService;
+        private readonly IAuditLogRepository _auditLogRepository;
+        private readonly INotificationService _notificationService;
 
-        public CommentService(ICommentRepository repository, IUserService userService)
+        public CommentService(ICommentRepository repository, IUserService userService, IAuditLogRepository auditLogRepository,
+        INotificationService notificationService)
         {
             _repository = repository;
             _userService = userService;
+            _auditLogRepository = auditLogRepository;
+            _notificationService = notificationService;
         }
 
         public async Task CreateCommentAsync(CommentCreateDto dto, int userId)
@@ -106,17 +113,43 @@ namespace KDomBackend.Services.Implementations
 
             await _repository.UpdateTextAsync(commentId, cleanText);
         }
-        public async Task DeleteCommentAsync(string commentId, int userId)
+        public async Task DeleteCommentAsync(string commentId, int userId, bool isModerator)
         {
             var comment = await _repository.GetByIdAsync(commentId);
             if (comment == null)
                 throw new Exception("Comment not found.");
 
-            if (comment.UserId != userId)
+            var isOwner = comment.UserId == userId;
+
+            if (!isOwner && !isModerator)
                 throw new UnauthorizedAccessException("You are not allowed to delete this comment.");
 
             await _repository.DeleteAsync(commentId);
+
+            await _auditLogRepository.CreateAsync(new AuditLog
+            {
+                UserId = userId,
+                Action = AuditAction.DeleteComment,
+                TargetType = AuditTargetType.Comment,
+                TargetId = commentId,
+                CreatedAt = DateTime.UtcNow,
+                Details = isModerator ? "Deleted by moderator" : "Deleted by autor"
+            });
+
+            if (isModerator)
+            {
+                await _notificationService.CreateNotificationAsync(new NotificationCreateDto
+                {
+                    UserId = comment.UserId,
+                    Type = NotificationType.SystemMessage,
+                    Message = "Your comment has been deleted by a moderator.",
+                    TriggeredByUserId = userId,
+                    TargetType = ContentType.Comment,
+                    TargetId = commentId
+                });
+            }
         }
+
 
 
     }

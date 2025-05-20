@@ -7,6 +7,7 @@ using KDomBackend.Repositories.Implementations;
 using KDomBackend.Services.Interfaces;
 using BCrypt.Net;
 using KDomBackend.Models.MongoEntities;
+using KDomBackend.Enums;
 
 namespace KDomBackend.Services.Implementations
 {
@@ -17,13 +18,15 @@ namespace KDomBackend.Services.Implementations
         private readonly IPasswordResetRepository _passwordResetRepository;
         private readonly IUserProfileRepository _profileRepository;
         private readonly IFollowRepository _followRepository;
+        private readonly IAuditLogRepository _auditLogRepository;
+
 
         public UserService(
             IUserRepository userRepository, 
             JwtHelper jwtHelper, 
             IPasswordResetRepository passwordResetRepository,
             IUserProfileRepository profileRepository, 
-            IFollowRepository followRepository
+            IFollowRepository followRepository, IAuditLogRepository auditLogRepository
             )
         {
             _userRepository = userRepository;
@@ -31,6 +34,7 @@ namespace KDomBackend.Services.Implementations
             _passwordResetRepository = passwordResetRepository;
             _profileRepository = profileRepository;
             _followRepository = followRepository;
+            _auditLogRepository = auditLogRepository;
         }
 
 
@@ -55,30 +59,67 @@ namespace KDomBackend.Services.Implementations
             };
 
             var userId = await _userRepository.CreateAsync(user);
+           
+            await _auditLogRepository.CreateAsync(new AuditLog
+            {
+                UserId = userId,
+                Action = AuditAction.CreateUser,
+                TargetType = AuditTargetType.User,
+                TargetId = userId.ToString(),
+                Details = "Account created.",
+                CreatedAt = DateTime.UtcNow
+            });
+
             return userId;
         }
 
-        public async Task<string> AuthenticateAsync(UserLoginDto dto)
+            public async Task<string> AuthenticateAsync(UserLoginDto dto)
         {
-            User? user = null;
+            try
+            {
+                User? user = null;
 
-            if (dto.Identifier.Contains("@"))
-                user = await _userRepository.GetByEmailAsync(dto.Identifier);
-            else
-                user = await _userRepository.GetByUsernameAsync(dto.Identifier);
+                if (dto.Identifier.Contains("@"))
+                    user = await _userRepository.GetByEmailAsync(dto.Identifier);
+                else
+                    user = await _userRepository.GetByUsernameAsync(dto.Identifier);
 
-            if (user == null || !user.IsActive)
-                throw new Exception("User not found or inactive.");
+                if (user == null || !user.IsActive)
+                    throw new Exception("User not found or inactive.");
 
-            var passwordMatch = BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash);
+                var passwordMatch = BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash);
+                if (!passwordMatch)
+                    throw new Exception("Invalid password.");
 
-            if (!passwordMatch)
-                throw new Exception("Invalid password.");
+                var token = _jwtHelper.GenerateToken(user);
 
-            
-            var token = _jwtHelper.GenerateToken(user);
+                await _auditLogRepository.CreateAsync(new AuditLog
+                {
+                    UserId = user.Id,
+                    Action = AuditAction.LoginSuccess,
+                    TargetType = AuditTargetType.User,
+                    TargetId = user.Id.ToString(),
+                    CreatedAt = DateTime.UtcNow,
+                    Details = "Login successful."
+                });
 
-            return token;
+                return token;
+            }
+            catch (Exception ex)
+            {
+                
+                await _auditLogRepository.CreateAsync(new AuditLog
+                {
+                    UserId = 0,
+                    Action = AuditAction.LoginFailed,
+                    TargetType = AuditTargetType.User,
+                    TargetId = dto.Identifier,
+                    CreatedAt = DateTime.UtcNow,
+                    Details = $"Login failed: {ex.Message}"
+                });
+
+                throw;
+            }
         }
 
         public async Task ChangePasswordAsync(int userId, ChangePasswordDto dto)
@@ -92,6 +133,16 @@ namespace KDomBackend.Services.Implementations
 
             var newHashed = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
             user.PasswordHash = newHashed;
+
+            await _auditLogRepository.CreateAsync(new AuditLog
+            {
+                UserId = user.Id,
+                Action = AuditAction.ChangePassword,
+                TargetType = AuditTargetType.User,
+                TargetId = user.Id.ToString(),
+                CreatedAt = DateTime.UtcNow,
+                Details = "Password changed."
+            });
 
             await _userRepository.UpdatePasswordAsync(user.Id, newHashed);
         }
@@ -129,6 +180,17 @@ namespace KDomBackend.Services.Implementations
                 throw new Exception("User not found.");
 
             var newHashed = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+
+            await _auditLogRepository.CreateAsync(new AuditLog
+            {
+                UserId = user.Id,
+                Action = AuditAction.ResetPassword,
+                TargetType = AuditTargetType.User,
+                TargetId = user.Id.ToString(),
+                CreatedAt = DateTime.UtcNow,
+                Details = "Password reset."
+            });
+
             await _userRepository.UpdatePasswordAsync(user.Id, newHashed);
             await _passwordResetRepository.MarkAsUsedAsync(tokenRecord.Id);
         }

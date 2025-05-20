@@ -1,5 +1,8 @@
-﻿using KDomBackend.Helpers;
+﻿using KDomBackend.Enums;
+using KDomBackend.Helpers;
 using KDomBackend.Models.DTOs.KDom;
+using KDomBackend.Models.DTOs.Notification;
+using KDomBackend.Models.Entities;
 using KDomBackend.Models.MongoEntities;
 using KDomBackend.Repositories.Implementations;
 using KDomBackend.Repositories.Interfaces;
@@ -11,11 +14,15 @@ namespace KDomBackend.Services.Implementations
     {
         private readonly IKDomRepository _kdomRepository;
         private readonly IUserService _userService;
+        private readonly IAuditLogRepository _auditLogRepository;
+        private readonly INotificationService _notificationService;
 
-        public KDomService(IKDomRepository kdomRepository, IUserService userService)
+        public KDomService(IKDomRepository kdomRepository, IUserService userService, IAuditLogRepository auditLogRepository, INotificationService notificationService)
         {
             _kdomRepository = kdomRepository;
             _userService = userService;
+            _auditLogRepository = auditLogRepository;
+            _notificationService = notificationService;
         }
 
 
@@ -37,14 +44,25 @@ namespace KDomBackend.Services.Implementations
                 CreatedAt = DateTime.UtcNow
             };
 
+            await _auditLogRepository.CreateAsync(new AuditLog
+            {
+                UserId = userId,
+                Action = AuditAction.CreateKDom,
+                TargetType = AuditTargetType.KDom,
+                TargetId = kdom.Id,
+                Details = kdom.Title,
+                CreatedAt = DateTime.UtcNow
+            });
+
+
             await _kdomRepository.CreateAsync(kdom);
         }
 
-        public async Task<bool> EditKDomAsync(KDomEditDto dto, int userId, bool isAutoSave = true)
+        public async Task<bool> EditKDomAsync(KDomEditDto dto, int userId)
         {
             var kdom = await _kdomRepository.GetByIdAsync(dto.KDomId);
             if (kdom == null)
-                throw new Exception("KDom not found.");
+                throw new Exception("K-Dom not found.");
 
             var sanitizedHtml = HtmlSanitizerHelper.Sanitize(dto.ContentHtml);
 
@@ -60,9 +78,22 @@ namespace KDomBackend.Services.Implementations
                 NewContentHtml = sanitizedHtml,
                 EditNote = dto.EditNote,
                 IsMinor = dto.IsMinor,
-                IsAutoSave = isAutoSave,
+                IsAutoSave = dto.IsAutoSave,
                 EditedAt = DateTime.UtcNow
             };
+           
+            if (!dto.IsAutoSave)
+            {
+                await _auditLogRepository.CreateAsync(new AuditLog
+                {
+                    UserId = userId,
+                    Action = AuditAction.EditKDom,
+                    TargetType = AuditTargetType.KDom,
+                    TargetId = dto.KDomId,
+                    CreatedAt = DateTime.UtcNow,
+                    Details = dto.EditNote ?? ""
+                });
+            }
 
             await _kdomRepository.SaveEditAsync(edit); 
             await _kdomRepository.UpdateContentAsync(dto.KDomId, sanitizedHtml);
@@ -74,10 +105,10 @@ namespace KDomBackend.Services.Implementations
         {
             var kdom = await _kdomRepository.GetByIdAsync(dto.KDomId);
             if (kdom == null)
-                throw new Exception("KDom not found.");
+                throw new Exception("K-Dom not found.");
 
             if (kdom.UserId != userId)
-                throw new UnauthorizedAccessException("You are not the author of this KDom.");
+                throw new UnauthorizedAccessException("You are not the author of this K-Dom.");
 
             if (kdom.Title == dto.Title &&
                 kdom.Description == dto.Description &&
@@ -114,7 +145,7 @@ namespace KDomBackend.Services.Implementations
         {
             var kdom = await _kdomRepository.GetByIdAsync(id);
             if (kdom == null)
-                throw new Exception("KDom not found.");
+                throw new Exception("K-Dom not found.");
 
             var username = await _userService.GetUsernameByUserIdAsync(kdom.UserId);
 
@@ -140,12 +171,9 @@ namespace KDomBackend.Services.Implementations
 
         public async Task<List<KDomEditReadDto>> GetEditHistoryAsync(string kdomId, int userId)
         {
-            var kdom = await _kdomRepository.GetByIdAsync(kdomId);
-            if (kdom == null)
-                throw new Exception("KDom not found.");
-
+            var kdom = await _kdomRepository.GetByIdAsync(kdomId) ?? throw new Exception("K-Dom not found.");
             if (kdom.UserId != userId)
-                throw new UnauthorizedAccessException("You are not the author of this KDom.");
+                throw new UnauthorizedAccessException("You are not the author of this K-Dom.");
 
             var edits = await _kdomRepository.GetEditsByKDomIdAsync(kdomId);
 
@@ -162,10 +190,10 @@ namespace KDomBackend.Services.Implementations
         {
             var kdom = await _kdomRepository.GetByIdAsync(kdomId);
             if (kdom == null)
-                throw new Exception("KDom not found.");
+                throw new Exception("K-Dom not found.");
 
             if (kdom.UserId != userId)
-                throw new UnauthorizedAccessException("You are not the owner of this KDom.");
+                throw new UnauthorizedAccessException("You are not the owner of this K-Dom.");
 
             var edits = await _kdomRepository.GetMetadataEditsByKDomIdAsync(kdomId);
 
@@ -180,6 +208,86 @@ namespace KDomBackend.Services.Implementations
                 PreviousTheme = e.PreviousTheme,
                 EditedAt = e.EditedAt
             }).ToList();
+        }
+
+        public async Task<List<KDomReadDto>> GetPendingKdomsAsync()
+        {
+            var pending = await _kdomRepository.GetPendingKdomsAsync();
+            var result = new List<KDomReadDto>();
+
+            foreach (var k in pending)
+            {
+                var username = await _userService.GetUsernameByUserIdAsync(k.UserId);
+
+                result.Add(new KDomReadDto
+                {
+                    Id = k.Id,
+                    Title = k.Title,
+                    Description = k.Description,
+                    UserId = k.UserId,
+                    AuthorUsername = username,
+                    CreatedAt = k.CreatedAt,
+                    IsForKids = k.IsForKids,
+                    ContentHtml = k.ContentHtml
+                });
+            }
+
+            return result;
+        }
+
+        public async Task ApproveKdomAsync(string kdomId, int moderatorId)
+        {
+            await _kdomRepository.ApproveAsync(kdomId);
+           
+            await _auditLogRepository.CreateAsync(new AuditLog
+            {
+                UserId = moderatorId,
+                Action = AuditAction.ApproveKDom,
+                TargetType = AuditTargetType.KDom,
+                TargetId = kdomId,
+                CreatedAt = DateTime.UtcNow
+            });
+            
+            var kdom = await _kdomRepository.GetByIdAsync(kdomId);
+            if (kdom == null) throw new Exception("K-Dom not found.");
+
+            await _notificationService.CreateNotificationAsync(new NotificationCreateDto
+            {
+                UserId = kdom.UserId,
+                Type = NotificationType.KDomApproved,
+                Message = $"Your K-dom \"{kdom.Title}\" has been approved.",
+                TriggeredByUserId = moderatorId,
+                TargetType = ContentType.KDom,
+                TargetId = kdomId
+            });
+        }
+
+        public async Task RejectKdomAsync(string kdomId, KDomRejectDto dto, int moderatorId)
+        {
+            await _kdomRepository.RejectAsync(kdomId, dto.Reason);
+
+            await _auditLogRepository.CreateAsync(new AuditLog
+            {
+                UserId = moderatorId,
+                Action = AuditAction.RejectKDom,
+                TargetType = AuditTargetType.KDom,
+                TargetId = kdomId,
+                CreatedAt = DateTime.UtcNow,
+                Details = dto.Reason
+            });
+            var kdom = await _kdomRepository.GetByIdAsync(kdomId);
+            if (kdom == null) throw new Exception("K-Dom not found.");
+
+            await _notificationService.CreateNotificationAsync(new NotificationCreateDto
+            {
+                UserId = kdom.UserId,
+                Type = NotificationType.KDomRejected,
+                Message = $"Your K-dom \"{kdom.Title}\" has been rejected. Reason: {dto.Reason}",
+                TriggeredByUserId = moderatorId,
+                TargetType = ContentType.KDom,
+                TargetId = kdomId
+            });
+
         }
 
 

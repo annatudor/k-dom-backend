@@ -6,7 +6,7 @@ namespace KDomBackend.Models.DTOs.Flag
     public class FlagCreateDto
     {
         [Required]
-        public FlagContentType ContentType { get; set; }
+        public ContentType ContentType { get; set; }
 
         [Required]
         public string ContentId { get; set; } = string.Empty;

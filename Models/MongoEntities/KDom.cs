@@ -22,6 +22,10 @@ namespace KDomBackend.Models.MongoEntities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? LastEditedtAt { get; set; }
         public DateTime? UpdatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsApproved { get; set; } = false;
+        public bool IsRejected { get; set; } = false;
+        public string? RejectionReason { get; set; }
+
 
     }
 }

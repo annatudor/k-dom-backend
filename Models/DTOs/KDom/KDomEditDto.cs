@@ -12,6 +12,8 @@ namespace KDomBackend.Models.DTOs.KDom
 
         public string? EditNote { get; set; }
         public bool IsMinor { get; set; } = false;
+        public bool IsAutoSave { get; set; } = true;
+
     }
 
 }
