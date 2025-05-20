@@ -57,6 +57,8 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IFollowRepository, FollowRepository>();
 builder.Services.AddScoped<IFollowService, FollowService>();
 builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
+builder.Services.AddScoped<IFlagRepository, FlagRepository>();
+builder.Services.AddScoped<IFlagService, FlagService>();
 
 
 

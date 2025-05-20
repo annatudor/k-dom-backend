@@ -11,5 +11,8 @@ namespace KDomBackend.Models.Entities
         public string ContentId { get; set; } = string.Empty;
         public string? Reason { get; set; }
         public DateTime CreatedAt { get; set; }
+
+        public bool IsResolved { get; set; } = false;
+
     }
 }
