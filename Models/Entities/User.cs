@@ -9,6 +9,7 @@
         public string? Provider { get; set; }
         public string? ProviderId { get; set; }
         public int RoleId { get; set; }
+        public string? Role { get; set; } // nu e in baza de date
         public DateTime CreatedAt { get; set; }
         public bool IsActive { get; set; } = true;
 

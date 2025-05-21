@@ -8,6 +8,7 @@ using KDomBackend.Services.Interfaces;
 using BCrypt.Net;
 using KDomBackend.Models.MongoEntities;
 using KDomBackend.Enums;
+using KDomBackend.Models.DTOs.Common;
 
 namespace KDomBackend.Services.Implementations
 {
@@ -249,6 +250,55 @@ namespace KDomBackend.Services.Implementations
 
                 await _profileRepository.UpdateAsync(profile);
             }
+        }
+
+        public async Task ChangeUserRoleAsync(int targetUserId, string newRole, int adminUserId)
+        {
+            var validRoles = new[] { "user", "moderator", "admin" };
+            if (!validRoles.Contains(newRole.ToLower()))
+                throw new ArgumentException("Invalid role.");
+
+            var targetUser = await _userRepository.GetByIdAsync(targetUserId);
+            if (targetUser == null)
+                throw new Exception("User does not exist.");
+
+            await _userRepository.UpdateRoleAsync(targetUserId, newRole.ToLower());
+
+            await _auditLogRepository.CreateAsync(new AuditLog
+            {
+                UserId = adminUserId,
+                Action = AuditAction.ChangeRole,
+                TargetType = AuditTargetType.User,
+                TargetId = targetUserId.ToString(),
+                CreatedAt = DateTime.UtcNow,
+                Details = $"Role changed in '{newRole}'"
+            });
+
+        }
+
+        public async Task<PagedResult<UserPublicDto>> GetAllPaginatedAsync(UserFilterDto filter)
+        {
+            var totalCount = await _userRepository.CountAsync(filter.Role, filter.Search);
+            var totalPages = (int)Math.Ceiling(totalCount / (double)filter.PageSize);
+            var skip = (filter.Page - 1) * filter.PageSize;
+
+            var users = await _userRepository.GetPaginatedAsync(skip, filter.PageSize, filter.Role, filter.Search);
+
+            return new PagedResult<UserPublicDto>
+            {
+                TotalCount = totalCount,
+                CurrentPage = filter.Page,
+                PageSize = filter.PageSize,
+                TotalPages = totalPages,
+                Items = users.Select(u => new UserPublicDto
+                {
+                    Id = u.Id,
+                    Username = u.Username,
+                    Email = u.Email,
+                    Role = u.Role ?? "",
+                    CreatedAt = u.CreatedAt
+                }).ToList()
+            };
         }
 
 

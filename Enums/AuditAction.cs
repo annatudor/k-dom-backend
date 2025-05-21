@@ -14,6 +14,7 @@
         RejectKDom,
         EditKDom,
         DeletePost,
-        DeleteComment
+        DeleteComment,
+        ChangeRole
     }
 }

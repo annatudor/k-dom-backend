@@ -120,5 +120,64 @@ namespace KDomBackend.Repositories.Implementations
             return await conn.QueryFirstOrDefaultAsync<User>(sql, new { Provider = provider, ProviderId = providerId });
         }
 
+        public async Task UpdateRoleAsync(int userId, string newRole)
+        {
+            using var conn = _context.CreateConnection();
+            const string sql = "UPDATE users SET role_id = (SELECT id FROM roles WHERE name = @RoleName) WHERE id = @UserId";
+            await conn.ExecuteAsync(sql, new { RoleName = newRole.ToLower(), UserId = userId });
+        }
+
+        public async Task<List<User>> GetPaginatedAsync(int skip, int take, string? role = null, string? search = null)
+        {
+            using var conn = _context.CreateConnection();
+
+            var sql = @"
+        SELECT u.*, r.name AS Role
+        FROM users u
+        JOIN roles r ON u.role_id = r.id
+        WHERE 1 = 1";
+
+            if (!string.IsNullOrEmpty(role))
+                sql += " AND r.name = @Role";
+
+            if (!string.IsNullOrEmpty(search))
+                sql += " AND (u.username LIKE @Search OR u.email LIKE @Search)";
+
+            sql += " ORDER BY u.created_at DESC LIMIT @Take OFFSET @Skip";
+
+            return (await conn.QueryAsync<User>(sql, new
+            {
+                Role = role?.ToLower(),
+                Search = $"%{search}%",
+                Take = take,
+                Skip = skip
+            })).ToList();
+        }
+
+        public async Task<int> CountAsync(string? role = null, string? search = null)
+        {
+            using var conn = _context.CreateConnection();
+
+            var sql = @"
+        SELECT COUNT(*)
+        FROM users u
+        JOIN roles r ON u.role_id = r.id
+        WHERE 1 = 1";
+
+            if (!string.IsNullOrEmpty(role))
+                sql += " AND r.name = @Role";
+
+            if (!string.IsNullOrEmpty(search))
+                sql += " AND (u.username LIKE @Search OR u.email LIKE @Search)";
+
+            return await conn.ExecuteScalarAsync<int>(sql, new
+            {
+                Role = role?.ToLower(),
+                Search = $"%{search}%"
+            });
+        }
+
+
+
     }
 }

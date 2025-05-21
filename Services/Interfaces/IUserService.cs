@@ -1,4 +1,5 @@
-﻿using KDomBackend.Models.DTOs.User;
+﻿using KDomBackend.Models.DTOs.Common;
+using KDomBackend.Models.DTOs.User;
 
 namespace KDomBackend.Services.Interfaces
 {
@@ -12,6 +13,8 @@ namespace KDomBackend.Services.Interfaces
         Task<string> GetUsernameByUserIdAsync(int userId);
         Task<UserProfileDto> GetUserProfileAsync(int userId);
         Task UpdateProfileAsync(int userId, UserProfileUpdateDto dto);
+        Task ChangeUserRoleAsync(int targetUserId, string newRole, int adminUserId);
+        Task<PagedResult<UserPublicDto>> GetAllPaginatedAsync(UserFilterDto filter);
 
 
     }

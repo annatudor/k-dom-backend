@@ -51,5 +51,34 @@ namespace KDomBackend.Controllers
             }
         }
 
+        [Authorize(Roles = "admin")]
+        [HttpPatch("{id}/role")]
+        public async Task<IActionResult> ChangeUserRole(int id, [FromBody] ChangeUserRoleDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var adminUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            try
+            {
+                await _userService.ChangeUserRoleAsync(id, dto.NewRole, adminUserId);
+                return Ok(new { message = "User's role has been updated." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [Authorize(Roles = "admin")]
+        [HttpGet]
+        public async Task<IActionResult> GetAllUsers([FromQuery] UserFilterDto filter)
+        {
+            var result = await _userService.GetAllPaginatedAsync(filter);
+            return Ok(result);
+        }
+
+
     }
 }

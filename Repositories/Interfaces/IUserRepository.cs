@@ -13,6 +13,11 @@ namespace KDomBackend.Repositories.Interfaces
         Task<bool> ExistsByUsernameAsync(string username);
         Task UpdatePasswordAsync(int userId, string newHashedPassword);
         Task<User?> GetByProviderIdAsync(string provider, string providerId);
+        Task UpdateRoleAsync(int userId, string newRole);
+        Task<List<User>> GetPaginatedAsync(int skip, int take, string? role = null, string? search = null);
+        Task<int> CountAsync(string? role = null, string? search = null);
+
+
 
     }
 }
