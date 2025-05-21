@@ -10,6 +10,7 @@ namespace KDomBackend.Services.Interfaces
         Task<List<CommentReadDto>> GetRepliesAsync(string parentCommentId);
         Task EditCommentAsync(string commentId, CommentEditDto dto, int userId);
         Task DeleteCommentAsync(string commentId, int userId, bool isModerator);
+        Task<CommentLikeResponseDto> ToggleLikeAsync(string commentId, int userId);
 
 
     }

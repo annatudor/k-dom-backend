@@ -41,6 +41,16 @@ namespace KDomBackend.Services.Implementations
             };
 
             await _repository.CreateAsync(post);
+            await MentionHelper.HandleMentionsAsync(
+                dto.ContentHtml,
+                userId,
+                post.Id,
+                ContentType.Post,
+                NotificationType.MentionInPost,
+                _userService,
+                _notificationService);
+
+
         }
 
         public async Task<List<PostReadDto>> GetAllPostsAsync()
@@ -103,7 +113,21 @@ namespace KDomBackend.Services.Implementations
 
             await _repository.ToggleLikeAsync(postId, userId, like);
 
-            // recalculam count dupa toggle
+            if (like && post.UserId != userId)
+            {
+                var likerUsername = await _userService.GetUsernameByUserIdAsync(userId);
+
+                await _notificationService.CreateNotificationAsync(new NotificationCreateDto
+                {
+                    UserId = post.UserId,
+                    Type = NotificationType.PostLiked,
+                    Message = $"{likerUsername} liked your post.",
+                    TriggeredByUserId = userId,
+                    TargetType = ContentType.Post,
+                    TargetId = postId
+                });
+            }
+
             var updatedPost = await _repository.GetByIdAsync(postId);
             var count = updatedPost?.Likes.Count ?? 0;
 
@@ -113,6 +137,7 @@ namespace KDomBackend.Services.Implementations
                 LikeCount = count
             };
         }
+
         public async Task EditPostAsync(string postId, PostEditDto dto, int userId)
         {
             var post = await _repository.GetByIdAsync(postId);
@@ -141,10 +166,10 @@ namespace KDomBackend.Services.Implementations
             if (!isOwner && !isModerator)
                 throw new UnauthorizedAccessException("You cannot have permission to delete this post.");
 
-            // Ștergere postare
+            // stergere postare
             await _repository.DeleteAsync(postId);
 
-            // Audit obligatoriu
+            // audit obligatoriu
             await _auditLogRepository.CreateAsync(new AuditLog
             {
                 UserId = userId,
@@ -155,7 +180,7 @@ namespace KDomBackend.Services.Implementations
                 Details = isModerator ? "Deleted by moderator" : "Deleted by user"
             });
 
-            // Notificare doar dacă e moderator
+            // notificare doar daca e moderator
             if (isModerator)
             {
                 await _notificationService.CreateNotificationAsync(new NotificationCreateDto

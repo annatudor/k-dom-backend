@@ -177,6 +177,24 @@ namespace KDomBackend.Repositories.Implementations
             });
         }
 
+        public async Task<User?> GetUserByUsernameAsync(string username)
+        {
+            using var conn = _context.CreateConnection();
+            const string sql = "SELECT * FROM users WHERE username = @Username";
+            return await conn.QueryFirstOrDefaultAsync<User>(sql, new { Username = username });
+        }
+
+        public async Task<List<User>> GetUsersByRolesAsync(string[] roles)
+        {
+            using var conn = _context.CreateConnection();
+            const string sql = @"
+        SELECT u.*, r.name AS Role
+        FROM users u
+        JOIN roles r ON u.role_id = r.id
+        WHERE r.name IN @Roles";
+
+            return (await conn.QueryAsync<User>(sql, new { Roles = roles.Select(r => r.ToLower()) })).ToList();
+        }
 
 
     }

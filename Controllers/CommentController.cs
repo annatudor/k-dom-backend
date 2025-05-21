@@ -93,6 +93,14 @@ namespace KDomBackend.Controllers
             }
         }
 
+        [Authorize]
+        [HttpPost("{id}/like")]
+        public async Task<IActionResult> ToggleLike(string id)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var result = await _commentService.ToggleLikeAsync(id, userId);
+            return Ok(result);
+        }
 
 
     }

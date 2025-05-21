@@ -41,6 +41,36 @@ namespace KDomBackend.Services.Implementations
             };
 
             await _repository.CreateAsync(comment);
+
+            if (!string.IsNullOrEmpty(comment.ParentCommentId))
+            {
+                var parent = await _repository.GetByIdAsync(comment.ParentCommentId);
+                if (parent != null && parent.UserId != userId)
+                {
+                    var triggeredByUsername = await _userService.GetUsernameByUserIdAsync(userId);
+
+                    await _notificationService.CreateNotificationAsync(new NotificationCreateDto
+                    {
+                        UserId = parent.UserId,
+                        Type = NotificationType.CommentReply,
+                        Message = $"{triggeredByUsername} replied to your comment.",
+                        TriggeredByUserId = userId,
+                        TargetType = ContentType.Comment,
+                        TargetId = comment.Id
+                    });
+                }
+            }
+
+            await MentionHelper.HandleMentionsAsync(
+                    dto.Text,
+                    userId,
+                    comment.Id,
+                    ContentType.Comment,
+                    NotificationType.MentionInComment,
+                    _userService,
+                    _notificationService);
+
+
         }
 
         public async Task<List<CommentReadDto>> GetCommentsByTargetAsync(CommentTargetType type, string targetId)
@@ -150,6 +180,43 @@ namespace KDomBackend.Services.Implementations
             }
         }
 
+        public async Task<CommentLikeResponseDto> ToggleLikeAsync(string commentId, int userId)
+        {
+            var comment = await _repository.GetByIdAsync(commentId);
+            if (comment == null)
+                throw new Exception("Comentariul nu a fost găsit.");
+
+            var alreadyLiked = comment.Likes.Contains(userId);
+            var like = !alreadyLiked;
+
+            await _repository.ToggleLikeAsync(commentId, userId, like);
+
+            
+            if (like && comment.UserId != userId)
+            {
+                var likerUsername = await _userService.GetUsernameByUserIdAsync(userId);
+
+                await _notificationService.CreateNotificationAsync(new NotificationCreateDto
+                {
+                    UserId = comment.UserId,
+                    Type = NotificationType.CommentLiked,
+                    Message = $"{likerUsername} ți-a apreciat comentariul.",
+                    TriggeredByUserId = userId,
+                    TargetType = ContentType.Comment,
+                    TargetId = comment.Id
+                });
+            }
+
+            
+            var updated = await _repository.GetByIdAsync(commentId);
+            var count = updated?.Likes.Count ?? 0;
+
+            return new CommentLikeResponseDto
+            {
+                Liked = like,
+                LikeCount = count
+            };
+        }
 
 
     }

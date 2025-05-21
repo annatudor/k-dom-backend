@@ -301,6 +301,10 @@ namespace KDomBackend.Services.Implementations
             };
         }
 
+        public async Task<User?> GetUserByUsernameAsync(string username)
+        {
+            return await _userRepository.GetByUsernameAsync(username);
+        }
 
 
     }

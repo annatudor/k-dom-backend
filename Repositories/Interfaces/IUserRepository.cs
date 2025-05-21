@@ -16,7 +16,8 @@ namespace KDomBackend.Repositories.Interfaces
         Task UpdateRoleAsync(int userId, string newRole);
         Task<List<User>> GetPaginatedAsync(int skip, int take, string? role = null, string? search = null);
         Task<int> CountAsync(string? role = null, string? search = null);
-
+        Task<User?> GetUserByUsernameAsync(string username);
+        Task<List<User>> GetUsersByRolesAsync(string[] roles);
 
 
     }

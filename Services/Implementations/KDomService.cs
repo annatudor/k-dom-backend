@@ -16,13 +16,19 @@ namespace KDomBackend.Services.Implementations
         private readonly IUserService _userService;
         private readonly IAuditLogRepository _auditLogRepository;
         private readonly INotificationService _notificationService;
+        private readonly IUserRepository _userRepository;
 
-        public KDomService(IKDomRepository kdomRepository, IUserService userService, IAuditLogRepository auditLogRepository, INotificationService notificationService)
+        public KDomService(IKDomRepository kdomRepository, 
+            IUserService userService,
+            IAuditLogRepository auditLogRepository, 
+            INotificationService notificationService, 
+            IUserRepository userRepository)
         {
             _kdomRepository = kdomRepository;
             _userService = userService;
             _auditLogRepository = auditLogRepository;
             _notificationService = notificationService;
+            _userRepository = userRepository;
         }
 
 
@@ -44,6 +50,8 @@ namespace KDomBackend.Services.Implementations
                 CreatedAt = DateTime.UtcNow
             };
 
+            await _kdomRepository.CreateAsync(kdom);
+            
             await _auditLogRepository.CreateAsync(new AuditLog
             {
                 UserId = userId,
@@ -54,8 +62,21 @@ namespace KDomBackend.Services.Implementations
                 CreatedAt = DateTime.UtcNow
             });
 
+            var moderators = await _userRepository.GetUsersByRolesAsync(new[] { "admin", "moderator" });
 
-            await _kdomRepository.CreateAsync(kdom);
+            foreach (var moderator in moderators)
+            {
+                await _notificationService.CreateNotificationAsync(new NotificationCreateDto
+                {
+                    UserId = moderator.Id,
+                    Type = NotificationType.KDomPending,
+                    Message = $"A new K-Dom is pending.",
+                    TriggeredByUserId = userId,
+                    TargetType = ContentType.KDom,
+                    TargetId = kdom.Id
+                });
+            }
+
         }
 
         public async Task<bool> EditKDomAsync(KDomEditDto dto, int userId)

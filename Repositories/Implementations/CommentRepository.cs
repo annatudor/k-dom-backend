@@ -56,6 +56,15 @@ namespace KDomBackend.Repositories.Implementations
             await _collection.DeleteOneAsync(c => c.Id == id);
         }
 
+        public async Task ToggleLikeAsync(string commentId, int userId, bool like)
+        {
+            var update = like
+                ? Builders<Comment>.Update.AddToSet(c => c.Likes, userId)
+                : Builders<Comment>.Update.Pull(c => c.Likes, userId);
+
+            await _collection.UpdateOneAsync(c => c.Id == commentId, update);
+        }
+
 
     }
 }

@@ -9,7 +9,9 @@
         CommentLiked,
         KDomPending,
         MentionInComment,
+        MentionInPost,
         NewFollower,
-        SystemMessage
+        SystemMessage,
+        
     }
 }

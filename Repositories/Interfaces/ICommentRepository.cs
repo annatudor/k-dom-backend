@@ -11,6 +11,7 @@ namespace KDomBackend.Repositories.Interfaces
         Task<Comment?> GetByIdAsync(string id);
         Task UpdateTextAsync(string id, string newText);
         Task DeleteAsync(string id);
+        Task ToggleLikeAsync(string commentId, int userId, bool like);
 
     }
 }
