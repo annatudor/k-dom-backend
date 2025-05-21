@@ -13,6 +13,7 @@ using MongoDB.Driver;
 using KDomBackend.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.SignalR;
+using KDomBackend.Services.Validation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -61,6 +62,13 @@ builder.Services.AddScoped<IFlagRepository, FlagRepository>();
 builder.Services.AddScoped<IFlagService, FlagService>();
 builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+builder.Services.AddScoped<KDomValidator>();
+builder.Services.AddScoped<KDomMetadataValidator>();
+builder.Services.AddScoped<ICollaborationRequestRepository, CollaborationRequestRepository>();
+builder.Services.AddScoped<ICollaborationRequestService, CollaborationRequestService>();
+
+
+
 
 
 SqlMapper.AddTypeHandler(new EnumAsStringHandler<AuditAction>());

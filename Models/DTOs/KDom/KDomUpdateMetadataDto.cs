@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using KDomBackend.Enums;
 
 public class KDomUpdateMetadataDto
 {
@@ -7,10 +8,11 @@ public class KDomUpdateMetadataDto
 
     [Required]
     public string Title { get; set; } = string.Empty;
+    public string? ParentId { get; set; }
 
     public string Description { get; set; } = string.Empty;
-    public string Hub { get; set; } = string.Empty;
-    public string Language { get; set; } = "en";
+    public Hub Hub { get; set; }
+    public Language Language { get; set; } 
     public bool IsForKids { get; set; }
     public string Theme { get; set; } = "light";
     public DateTime UpdatedAt { get; set; }

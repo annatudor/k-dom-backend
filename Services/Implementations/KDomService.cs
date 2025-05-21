@@ -1,5 +1,6 @@
 ﻿using KDomBackend.Enums;
 using KDomBackend.Helpers;
+using KDomBackend.Models.DTOs.Collaboration;
 using KDomBackend.Models.DTOs.KDom;
 using KDomBackend.Models.DTOs.Notification;
 using KDomBackend.Models.Entities;
@@ -7,6 +8,7 @@ using KDomBackend.Models.MongoEntities;
 using KDomBackend.Repositories.Implementations;
 using KDomBackend.Repositories.Interfaces;
 using KDomBackend.Services.Interfaces;
+using KDomBackend.Services.Validation;
 
 namespace KDomBackend.Services.Implementations
 {
@@ -17,24 +19,31 @@ namespace KDomBackend.Services.Implementations
         private readonly IAuditLogRepository _auditLogRepository;
         private readonly INotificationService _notificationService;
         private readonly IUserRepository _userRepository;
+        private readonly KDomValidator _validator;
+        private readonly KDomMetadataValidator _metadataValidator;
 
         public KDomService(IKDomRepository kdomRepository, 
             IUserService userService,
             IAuditLogRepository auditLogRepository, 
             INotificationService notificationService, 
-            IUserRepository userRepository)
+            IUserRepository userRepository, 
+            KDomValidator validator,
+            KDomMetadataValidator metadataValidator)
         {
             _kdomRepository = kdomRepository;
             _userService = userService;
             _auditLogRepository = auditLogRepository;
             _notificationService = notificationService;
             _userRepository = userRepository;
+            _validator = validator;
+            _metadataValidator = metadataValidator;
         }
 
 
         public async Task CreateKDomAsync(KDomCreateDto dto, int userId)
         {
             var sanitizedHtml = HtmlSanitizerHelper.Sanitize(dto.ContentHtml);
+            await _validator.CheckDuplicateOrSuggestAsync(dto.Title);
 
             var kdom = new KDom
             {
@@ -47,8 +56,10 @@ namespace KDomBackend.Services.Implementations
                 Theme = dto.Theme,
                 ContentHtml = sanitizedHtml,
                 UserId = userId,
+                ParentId = dto.ParentId, //  nou
                 CreatedAt = DateTime.UtcNow
             };
+
 
             await _kdomRepository.CreateAsync(kdom);
             
@@ -131,6 +142,8 @@ namespace KDomBackend.Services.Implementations
             if (kdom.UserId != userId)
                 throw new UnauthorizedAccessException("You are not the author of this K-Dom.");
 
+            await _metadataValidator.ValidateParentAsync(dto.KDomId, dto.ParentId);
+
             if (kdom.Title == dto.Title &&
                 kdom.Description == dto.Description &&
                 kdom.Language == dto.Language &&
@@ -143,7 +156,7 @@ namespace KDomBackend.Services.Implementations
 
             
             var metadataEdit = new KDomMetadataEdit
-            {
+            {   PreviousParentId = kdom.ParentId,
                 KDomId = kdom.Id,
                 UserId = userId,
                 PreviousTitle = kdom.Title,
@@ -221,6 +234,7 @@ namespace KDomBackend.Services.Implementations
             return edits.Select(e => new KDomMetadataEditReadDto
             {
                 Id = e.Id,
+                PreviousParentId = e.PreviousParentId,
                 PreviousTitle = e.PreviousTitle,
                 PreviousDescription = e.PreviousDescription,
                 PreviousLanguage = e.PreviousLanguage,
@@ -309,6 +323,135 @@ namespace KDomBackend.Services.Implementations
                 TargetId = kdomId
             });
 
+        }
+
+        public async Task<List<KDomReadDto>> GetChildrenAsync(string parentId)
+        {
+            var children = await _kdomRepository.GetChildrenByParentIdAsync(parentId);
+
+            var result = new List<KDomReadDto>();
+
+            foreach (var kdom in children)
+            {
+                var username = await _userService.GetUsernameByUserIdAsync(kdom.UserId);
+
+                result.Add(new KDomReadDto
+                {
+                    Id = kdom.Id,
+                    Title = kdom.Title,
+                    Slug = kdom.Slug,
+                    Description = kdom.Description,
+                    Hub = kdom.Hub,
+                    Language = kdom.Language,
+                    Theme = kdom.Theme,
+                    IsForKids = kdom.IsForKids,
+                    ContentHtml = kdom.ContentHtml,
+                    AuthorUsername = username,
+                    UserId = kdom.UserId,
+                    CreatedAt = kdom.CreatedAt,
+                    UpdatedAt = kdom.UpdatedAt,
+                    LastEditedAt = kdom.LastEditedtAt
+                });
+            }
+
+            return result;
+        }
+
+        public async Task<KDomReadDto?> GetParentAsync(string childId)
+        {
+            var parent = await _kdomRepository.GetParentAsync(childId);
+            if (parent == null)
+                return null;
+
+            var username = await _userService.GetUsernameByUserIdAsync(parent.UserId);
+
+            return new KDomReadDto
+            {
+                Id = parent.Id,
+                Title = parent.Title,
+                Slug = parent.Slug,
+                Description = parent.Description,
+                Hub = parent.Hub,
+                Language = parent.Language,
+                Theme = parent.Theme,
+                IsForKids = parent.IsForKids,
+                ContentHtml = parent.ContentHtml,
+                AuthorUsername = username,
+                UserId = parent.UserId,
+                CreatedAt = parent.CreatedAt,
+                UpdatedAt = parent.UpdatedAt,
+                LastEditedAt = parent.LastEditedtAt
+            };
+        }
+
+        public async Task<List<KDomReadDto>> GetSiblingsAsync(string kdomId)
+        {
+            var siblings = await _kdomRepository.GetSiblingsAsync(kdomId);
+
+            var result = new List<KDomReadDto>();
+            foreach (var k in siblings)
+            {
+                var username = await _userService.GetUsernameByUserIdAsync(k.UserId);
+
+                result.Add(new KDomReadDto
+                {
+                    Id = k.Id,
+                    Title = k.Title,
+                    Slug = k.Slug,
+                    Description = k.Description,
+                    Hub = k.Hub,
+                    Language = k.Language,
+                    Theme = k.Theme,
+                    IsForKids = k.IsForKids,
+                    ContentHtml = k.ContentHtml,
+                    AuthorUsername = username,
+                    UserId = k.UserId,
+                    CreatedAt = k.CreatedAt,
+                    UpdatedAt = k.UpdatedAt,
+                    LastEditedAt = k.LastEditedtAt
+                });
+            }
+
+            return result;
+        }
+
+        public async Task<List<CollaboratorReadDto>> GetCollaboratorsAsync(string kdomId, int requesterId)
+        {
+            var kdom = await _kdomRepository.GetByIdAsync(kdomId);
+            if (kdom == null)
+                throw new Exception("K-Dom not found.");
+
+            if (kdom.UserId != requesterId)
+                throw new UnauthorizedAccessException("Only the owner can view collaborators.");
+
+            var result = new List<CollaboratorReadDto>();
+
+            foreach (var userId in kdom.Collaborators)
+            {
+                var username = await _userService.GetUsernameByUserIdAsync(userId);
+                result.Add(new CollaboratorReadDto
+                {
+                    UserId = userId,
+                    Username = username ?? "unknown"
+                });
+            }
+
+            return result;
+        }
+        public async Task RemoveCollaboratorAsync(string kdomId, int requesterId, int userIdToRemove)
+        {
+            var kdom = await _kdomRepository.GetByIdAsync(kdomId);
+            if (kdom == null)
+                throw new Exception("K-Dom not found.");
+
+            if (kdom.UserId != requesterId)
+                throw new UnauthorizedAccessException("Only the owner can remove collaborators.");
+
+            if (!kdom.Collaborators.Contains(userIdToRemove))
+                throw new Exception("User is not a collaborator.");
+
+            kdom.Collaborators.Remove(userIdToRemove);
+            await _kdomRepository.UpdateCollaboratorsAsync(kdomId, kdom.Collaborators);
         }
 
 

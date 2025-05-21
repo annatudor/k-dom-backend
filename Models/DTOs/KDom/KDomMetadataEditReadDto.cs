@@ -1,12 +1,15 @@
-﻿namespace KDomBackend.Models.DTOs.KDom
+﻿using KDomBackend.Enums;
+
+namespace KDomBackend.Models.DTOs.KDom
 {
     public class KDomMetadataEditReadDto
     {
         public string Id { get; set; } = string.Empty;
+        public string? PreviousParentId { get; set; }
         public string PreviousTitle { get; set; } = string.Empty;
         public string PreviousDescription { get; set; } = string.Empty;
-        public string PreviousLanguage { get; set; } = string.Empty;
-        public string PreviousHub { get; set; } = string.Empty;
+        public Language PreviousLanguage { get; set; }
+        public Hub PreviousHub { get; set; }
         public bool PreviousIsForKids { get; set; }
         public string PreviousTheme { get; set; } = "light";
         public DateTime EditedAt { get; set; }

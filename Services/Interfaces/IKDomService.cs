@@ -1,4 +1,5 @@
-﻿using KDomBackend.Models.DTOs.KDom;
+﻿using KDomBackend.Models.DTOs.Collaboration;
+using KDomBackend.Models.DTOs.KDom;
 
 namespace KDomBackend.Services.Interfaces
 {
@@ -13,7 +14,11 @@ namespace KDomBackend.Services.Interfaces
         Task<List<KDomReadDto>> GetPendingKdomsAsync();
         Task ApproveKdomAsync(string kdomId, int moderatorId);
         Task RejectKdomAsync(string kdomId, KDomRejectDto dto, int moderatorId);
-
+        Task<List<KDomReadDto>> GetChildrenAsync(string parentId);
+        Task<KDomReadDto?> GetParentAsync(string childId);
+        Task<List<KDomReadDto>> GetSiblingsAsync(string kdomId);
+        Task<List<CollaboratorReadDto>> GetCollaboratorsAsync(string kdomId, int requesterId);
+        Task RemoveCollaboratorAsync(string kdomId, int requesterId, int userIdToRemove);
 
     }
 }

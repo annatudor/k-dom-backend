@@ -21,7 +21,7 @@ namespace KDomBackend.Data
         public IMongoCollection<Comment> Comments => _database.GetCollection<Comment>("comments");
         public IMongoCollection<UserProfile> UserProfiles => _database.GetCollection<UserProfile>("user_profiles");
         public IMongoCollection<Notification> Notifications => _database.GetCollection<Notification>("notifications");
-        public IMongoCollection<Activity> Activities => _database.GetCollection<Activity>("activity");
+        
 
         
         public IMongoCollection<KDomEdit> KDomEdits => _database.GetCollection<KDomEdit>("kdom_edits");
@@ -29,6 +29,8 @@ namespace KDomBackend.Data
         public IMongoCollection<CommentEdit> CommentEdits => _database.GetCollection<CommentEdit>("comment_edits");
         public IMongoCollection<KDomMetadataEdit> KDomMetadataEdits =>
                     _database.GetCollection<KDomMetadataEdit>("kdom_metadata_edits");
+        public IMongoCollection<KDomCollaborationRequest> KDomCollaborationRequests => 
+            _database.GetCollection<KDomCollaborationRequest>("kdom_collab_requests");
 
     }
 }

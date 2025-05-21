@@ -1,4 +1,6 @@
-﻿namespace KDomBackend.Models.DTOs.KDom
+﻿using KDomBackend.Enums;
+
+namespace KDomBackend.Models.DTOs.KDom
 {
     public class KDomReadDto
     {
@@ -6,10 +8,10 @@
         public string Title { get; set; } = string.Empty;
         public string Slug { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
-        public string Hub { get; set; } = string.Empty;
+        public Hub Hub { get; set; }
         public string Theme { get; set; } = "light";
         public string ContentHtml { get; set; } = string.Empty;
-        public string Language { get; set; } = "en";
+        public Language Language { get; set; }
         public bool IsForKids { get; set; }
         public int UserId { get; set; }  
         public string AuthorUsername { get; set; } = string.Empty;

@@ -1,7 +1,9 @@
 ﻿using KDomBackend.Data;
 using KDomBackend.Models.MongoEntities;
 using KDomBackend.Repositories.Interfaces;
+using MongoDB.Bson;
 using MongoDB.Driver;
+using System.Text.RegularExpressions;
 
 namespace KDomBackend.Repositories.Implementations
 {
@@ -44,6 +46,7 @@ namespace KDomBackend.Repositories.Implementations
         public async Task UpdateMetadataAsync(KDomUpdateMetadataDto dto)
         {
             var update = Builders<KDom>.Update
+                .Set(x => x.ParentId, dto.ParentId)
                 .Set(x => x.Title, dto.Title)
                 .Set(x => x.Description, dto.Description)
                 .Set(x => x.Hub, dto.Hub)
@@ -106,6 +109,56 @@ namespace KDomBackend.Repositories.Implementations
             await _collection.UpdateOneAsync(k => k.Id == kdomId, update);
         }
 
+        public async Task<bool> ExistsByTitleOrSlugAsync(string title, string slug)
+        {
+            var filter = Builders<KDom>.Filter.Or(
+                Builders<KDom>.Filter.Eq(k => k.Title, title),
+                Builders<KDom>.Filter.Eq(k => k.Slug, slug)
+            );
+
+            return await _collection.Find(filter).AnyAsync();
+        }
+
+        public async Task<List<KDom>> FindSimilarByTitleAsync(string title)
+        {
+            var regex = new BsonRegularExpression($".*{Regex.Escape(title)}.*", "i");
+
+            var filter = Builders<KDom>.Filter.Regex(k => k.Title, regex);
+
+            return await _collection.Find(filter).Limit(5).ToListAsync();
+        }
+
+        public async Task<List<KDom>> GetChildrenByParentIdAsync(string parentId)
+        {
+            var filter = Builders<KDom>.Filter.Eq(k => k.ParentId, parentId);
+            return await _collection.Find(filter).ToListAsync();
+        }
+
+        public async Task<KDom?> GetParentAsync(string childId)
+        {
+            var child = await _collection.Find(k => k.Id == childId).FirstOrDefaultAsync();
+            if (child?.ParentId == null) return null;
+
+            return await _collection.Find(k => k.Id == child.ParentId).FirstOrDefaultAsync();
+        }
+        public async Task<List<KDom>> GetSiblingsAsync(string kdomId)
+        {
+            var current = await _collection.Find(k => k.Id == kdomId).FirstOrDefaultAsync();
+            if (current == null || current.ParentId == null)
+                return new List<KDom>();
+
+            var filter = Builders<KDom>.Filter.And(
+                Builders<KDom>.Filter.Eq(k => k.ParentId, current.ParentId),
+                Builders<KDom>.Filter.Ne(k => k.Id, kdomId) // exclude pe sine
+            );
+
+            return await _collection.Find(filter).ToListAsync();
+        }
+        public async Task UpdateCollaboratorsAsync(string kdomId, List<int> collaborators)
+        {
+            var update = Builders<KDom>.Update.Set(k => k.Collaborators, collaborators);
+            await _collection.UpdateOneAsync(k => k.Id == kdomId, update);
+        }
 
     }
 }
