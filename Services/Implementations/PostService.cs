@@ -17,31 +17,50 @@ namespace KDomBackend.Services.Implementations
         private readonly IFollowRepository _followRepository;
         private readonly IAuditLogRepository _auditLogRepository;
         private readonly INotificationService _notificationService;
+        private readonly KDomTagHelper _tagHelper;
+        private readonly IKDomFollowRepository _kdomFollowRepository;
+        private readonly IKDomRepository _kdomRepository;
 
-        public PostService(IPostRepository repository, IUserService userService, IFollowRepository followRepository, IAuditLogRepository auditLogRepository, INotificationService notificationService)
+
+        public PostService(IPostRepository repository, 
+            IUserService userService, 
+            IFollowRepository followRepository, 
+            IAuditLogRepository auditLogRepository, 
+            INotificationService notificationService, 
+            KDomTagHelper tagHelper,
+            IKDomFollowRepository kdomFollowRepository,
+            IKDomRepository kdomRepository
+            )
         {
             _repository = repository;
             _userService = userService;
             _followRepository = followRepository;
             _auditLogRepository = auditLogRepository;
             _notificationService = notificationService;
+            _tagHelper = tagHelper;
+            _kdomFollowRepository = kdomFollowRepository;
+            _kdomRepository = kdomRepository;
         }
 
 
         public async Task CreatePostAsync(PostCreateDto dto, int userId)
         {
             var cleanHtml = HtmlSanitizerHelper.Sanitize(dto.ContentHtml);
+            var tags = await _tagHelper.GetTagsFromKDomIdAsync(dto.KDomId);
+
 
             var post = new Post
             {
                 UserId = userId,
                 ContentHtml = cleanHtml,
-                Tags = dto.Tags,
+                Tags = tags,
                 CreatedAt = DateTime.UtcNow
             };
 
             await _repository.CreateAsync(post);
-            await MentionHelper.HandleMentionsAsync(
+            if (dto.ContentHtml.Contains("@"))
+            {
+                await MentionHelper.HandleMentionsAsync(
                 dto.ContentHtml,
                 userId,
                 post.Id,
@@ -49,6 +68,7 @@ namespace KDomBackend.Services.Implementations
                 NotificationType.MentionInPost,
                 _userService,
                 _notificationService);
+            }
 
 
         }
@@ -218,10 +238,19 @@ namespace KDomBackend.Services.Implementations
         public async Task<List<PostReadDto>> GetFeedAsync(int userId)
         {
             var followedUserIds = await _followRepository.GetFollowingAsync(userId);
-            var posts = await _repository.GetFeedPostsAsync(followedUserIds);
+            var followedKDomIds = await _kdomFollowRepository.GetFollowedKDomIdsAsync(userId);
+            var followedKdoms = await _kdomRepository.GetByIdsAsync(followedKDomIds);
+            var followedTags = followedKdoms.Select(k => k.Slug).ToList();
+
+            if (!followedUserIds.Any() && !followedKDomIds.Any())
+            {
+                // un array gol
+                return new List<PostReadDto>();
+            }
+
+            var posts = await _repository.GetFeedPostsAsync(followedUserIds, followedTags);
 
             var result = new List<PostReadDto>();
-
             foreach (var post in posts)
             {
                 var username = await _userService.GetUsernameByUserIdAsync(post.UserId);
@@ -242,6 +271,7 @@ namespace KDomBackend.Services.Implementations
 
             return result;
         }
+
 
         public async Task<List<PostReadDto>> GetGuestFeedAsync(int limit = 30)
         {
@@ -269,6 +299,28 @@ namespace KDomBackend.Services.Implementations
             return result;
         }
 
+        public async Task<List<PostReadDto>> GetPostsByTagAsync(string tag)
+        {
+            var posts = await _repository.GetByTagAsync(tag);
+            var result = new List<PostReadDto>();
+
+            foreach (var post in posts)
+            {
+                var username = await _userService.GetUsernameByUserIdAsync(post.UserId);
+
+                result.Add(new PostReadDto
+                {
+                    Id = post.Id,
+                    UserId = post.UserId,
+                    Username = username ?? "unknown",
+                    ContentHtml = post.ContentHtml,
+                    Tags = post.Tags,
+                    CreatedAt = post.CreatedAt
+                });
+            }
+
+            return result;
+        }
 
 
     }

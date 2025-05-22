@@ -66,8 +66,10 @@ builder.Services.AddScoped<KDomValidator>();
 builder.Services.AddScoped<KDomMetadataValidator>();
 builder.Services.AddScoped<ICollaborationRequestRepository, CollaborationRequestRepository>();
 builder.Services.AddScoped<ICollaborationRequestService, CollaborationRequestService>();
-
-
+builder.Services.AddScoped<KDomTagHelper>();
+builder.Services.AddScoped<IKDomFollowRepository, KDomFollowRepository>();
+builder.Services.AddScoped<IKDomFollowService, KDomFollowService>();
+builder.Services.AddScoped<IKDomEditRepository, KDomEditRepository>();
 
 
 

@@ -21,6 +21,11 @@ namespace KDomBackend.Services.Implementations
         private readonly IUserRepository _userRepository;
         private readonly KDomValidator _validator;
         private readonly KDomMetadataValidator _metadataValidator;
+        private readonly IPostRepository _postRepository;
+        private readonly ICommentRepository _commentRepository;
+        private readonly IKDomFollowRepository _kdomFollowRepository;
+        private readonly IKDomEditRepository _kdomEditRepository;
+
 
         public KDomService(IKDomRepository kdomRepository, 
             IUserService userService,
@@ -28,7 +33,12 @@ namespace KDomBackend.Services.Implementations
             INotificationService notificationService, 
             IUserRepository userRepository, 
             KDomValidator validator,
-            KDomMetadataValidator metadataValidator)
+            KDomMetadataValidator metadataValidator,
+            IPostRepository postRepository,
+            ICommentRepository commentRepository,
+            IKDomFollowRepository kdomFollowRepository,
+            IKDomEditRepository kdomEditRepository
+            )
         {
             _kdomRepository = kdomRepository;
             _userService = userService;
@@ -37,6 +47,10 @@ namespace KDomBackend.Services.Implementations
             _userRepository = userRepository;
             _validator = validator;
             _metadataValidator = metadataValidator;
+            _postRepository = postRepository;
+            _commentRepository = commentRepository;
+            _kdomFollowRepository = kdomFollowRepository;
+            _kdomEditRepository = kdomEditRepository;
         }
 
 
@@ -473,10 +487,154 @@ namespace KDomBackend.Services.Implementations
                 TargetId = kdomId
             });
 
-
-
         }
 
+        public async Task CreateSubKDomAsync(string parentId, KDomSubCreateDto dto, int userId)
+        {
+            var parent = await _kdomRepository.GetByIdAsync(parentId);
+            if (parent == null)
+                throw new Exception("Parent not found.");
+
+            if (parent.UserId != userId && !parent.Collaborators.Contains(userId))
+                throw new UnauthorizedAccessException("You do not have permission to create a page.");
+
+            var slug = SlugHelper.GenerateSlug(dto.Title);
+            var exists = await _kdomRepository.ExistsByTitleOrSlugAsync(dto.Title, slug);
+            if (exists)
+                throw new Exception("A K-Dom with this title already exists.");
+
+            var sanitizedHtml = HtmlSanitizerHelper.Sanitize(dto.ContentHtml);
+
+            var subKdom = new KDom
+            {
+                Title = dto.Title,
+                Slug = slug,
+                Description = dto.Description,
+                Hub = parent.Hub,
+                Language = parent.Language,
+                IsForKids = parent.IsForKids,
+                Theme = dto.Theme,
+                ContentHtml = sanitizedHtml,
+                UserId = parent.UserId,
+                ParentId = parent.Id,
+                Collaborators = parent.Collaborators.ToList(),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _kdomRepository.CreateAsync(subKdom);
+
+            await _auditLogRepository.CreateAsync(new AuditLog
+            {
+                UserId = userId,
+                Action = AuditAction.CreateKDom,
+                TargetType = AuditTargetType.KDom,
+                TargetId = subKdom.Id,
+                Details = $"SubK-Dom: {dto.Title} (parent {parent.Title})",
+                CreatedAt = DateTime.UtcNow
+            });
+
+            var moderators = await _userRepository.GetUsersByRolesAsync(new[] { "admin", "moderator" });
+
+            foreach (var mod in moderators)
+            {
+                await _notificationService.CreateNotificationAsync(new NotificationCreateDto
+                {
+                    UserId = mod.Id,
+                    Type = NotificationType.KDomPending,
+                    Message = $"A new subK-Dom has been created: {dto.Title}.",
+                    TriggeredByUserId = userId,
+                    TargetType = ContentType.KDom,
+                    TargetId = subKdom.Id
+                });
+            }
+        }
+
+        public async Task<List<KDomSearchResultDto>> SearchAsync(string query)
+        {
+            var results = await _kdomRepository.SearchByQueryAsync(query);
+
+            return results.Select(k => new KDomSearchResultDto
+            {
+                Id = k.Id,
+                Title = k.Title,
+                Slug = k.Slug
+            }).ToList();
+        }
+        public async Task<List<KDomTrendingDto>> GetTrendingKdomsAsync(int days = 7)
+        {
+            var postScores = await _postRepository.GetRecentTagCountsAsync(days);
+            var slugs = postScores.Keys.ToList();
+            var kdoms = await _kdomRepository.GetBySlugsAsync(slugs);
+
+            var result = kdoms.Select(k => new KDomTrendingDto
+            {
+                Id = k.Id,
+                Title = k.Title,
+                Slug = k.Slug,
+                PostScore = postScores.TryGetValue(k.Slug, out var count) ? count : 0
+            }).ToList();
+
+            // urmează să adăugăm comentarii, follows, edits
+            var commentScores = await _commentRepository.CountRecentCommentsByKDomAsync(days);
+
+            foreach (var item in result)
+            {
+                item.CommentScore = commentScores.TryGetValue(item.Id, out var count) ? count : 0;
+            }
+
+            var followScores = await _kdomFollowRepository.CountRecentFollowsAsync(days);
+
+            foreach (var item in result)
+            {
+                item.FollowScore = followScores.TryGetValue(item.Id, out var count) ? count : 0;
+            }
+
+            var editScores = await _kdomRepository.CountRecentEditsAsync(days);
+
+            foreach (var item in result)
+            {
+                item.EditScore = editScores.TryGetValue(item.Id, out var count) ? count : 0;
+            }
+
+
+
+            return result;
+        }
+
+        public async Task<List<KDomSearchResultDto>> GetSuggestedKdomsAsync(int userId, int limit = 10)
+        {
+            var followedSlugs = await _kdomFollowRepository.GetFollowedSlugsAsync(userId);
+
+            
+            var recentPosts = await _postRepository.GetRecentPostsByUserAsync(userId, 30);
+            var postSlugs = recentPosts.SelectMany(p => p.Tags).Distinct();
+
+            
+            var commentedKDomIds = await _commentRepository.GetCommentedKDomIdsByUserAsync(userId);
+            var editedKDomIds = await _kdomEditRepository.GetEditedKDomIdsByUserAsync(userId);
+
+            
+            var allKDomIds = commentedKDomIds.Concat(editedKDomIds).Distinct();
+            var kdomsFromIds = await _kdomRepository.GetByIdsAsync(allKDomIds);
+            var commentSlugs = kdomsFromIds.Select(k => k.Slug).ToList();
+
+            
+            var suggestedSlugs = postSlugs
+                .Concat(commentSlugs)
+                .Distinct()
+                .Except(followedSlugs)
+                .Take(limit)
+                .ToList();
+
+            var suggestedKdoms = await _kdomRepository.GetBySlugsAsync(suggestedSlugs);
+
+            return suggestedKdoms.Select(k => new KDomSearchResultDto
+            {
+                Id = k.Id,
+                Title = k.Title,
+                Slug = k.Slug
+            }).ToList();
+        }
 
 
     }

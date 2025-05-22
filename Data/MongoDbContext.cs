@@ -1,5 +1,6 @@
 ﻿using KDomBackend.Helpers;
 using KDomBackend.Models.MongoEntities;
+using KDomBackend.Models.MongoEntities.KDomBackend.Models.MongoEntities;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 
@@ -21,6 +22,7 @@ namespace KDomBackend.Data
         public IMongoCollection<Comment> Comments => _database.GetCollection<Comment>("comments");
         public IMongoCollection<UserProfile> UserProfiles => _database.GetCollection<UserProfile>("user_profiles");
         public IMongoCollection<Notification> Notifications => _database.GetCollection<Notification>("notifications");
+        public IMongoCollection<KDomFollow> KDomFollows => _database.GetCollection<KDomFollow>("kdom_follows");
         
 
         

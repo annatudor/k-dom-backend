@@ -129,14 +129,35 @@ namespace KDomBackend.Controllers
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var posts = await _postService.GetFeedAsync(userId);
+
+            if (!posts.Any())
+            {
+                return Ok(new
+                {
+                    message = "You’re not following anyone yet. Follow users or K-Doms to see personalized posts here.",
+                    posts = new List<PostReadDto>()
+                });
+            }
+
             return Ok(posts);
         }
+
 
         [AllowAnonymous]
         [HttpGet("guest-feed")]
         public async Task<IActionResult> GetGuestFeed([FromQuery] int limit = 30)
         {
             var posts = await _postService.GetGuestFeedAsync(limit);
+            return Ok(posts);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetByTag([FromQuery] string tag)
+        {
+            if (string.IsNullOrWhiteSpace(tag))
+                return BadRequest(new { error = "Tag is required." });
+
+            var posts = await _postService.GetPostsByTagAsync(tag.ToLower());
             return Ok(posts);
         }
 

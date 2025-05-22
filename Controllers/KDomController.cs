@@ -17,6 +17,7 @@ namespace KDomBackend.Controllers
         private readonly IKDomService _kdomService;
         private readonly IKDomRepository _repository;
         private readonly ICollaborationRequestService _collaborationRequestService;
+        private readonly IKDomFollowService _kdomFollowService;
         public KDomController(
             IKDomService kdomService, 
             IKDomRepository repository, 
@@ -319,6 +320,108 @@ namespace KDomBackend.Controllers
             {
                 return BadRequest(new { error = ex.Message });
             }
+        }
+
+        [Authorize]
+        [HttpPost("{parentId}/sub")]
+        public async Task<IActionResult> CreateSubKDom(string parentId, [FromBody] KDomSubCreateDto dto)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                await _kdomService.CreateSubKDomAsync(parentId, dto, userId);
+                return Ok(new { message = "SubK-Dom created succesfully." });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> Search([FromQuery] string query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return BadRequest(new { error = "'query' field is required." });
+
+            var results = await _kdomService.SearchAsync(query.Trim());
+            return Ok(results);
+        }
+
+        [Authorize]
+        [HttpPost("{id}/follow")]
+        public async Task<IActionResult> FollowKDom(string id)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            try
+            {
+                await _kdomFollowService.FollowAsync(id, userId);
+                return Ok(new { message = "You are now following this K-Dom." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [HttpDelete("{id}/unfollow")]
+        public async Task<IActionResult> UnfollowKDom(string id)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+            try
+            {
+                await _kdomFollowService.UnfollowAsync(id, userId);
+                return Ok(new { message = "You unfollowed this K-Dom." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [HttpGet("followed")]
+        public async Task<IActionResult> GetFollowedKdoms()
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var followed = await _kdomFollowService.GetFollowedKDomsAsync(userId);
+            return Ok(followed);
+        }
+
+        [Authorize]
+        [HttpGet("{id}/is-followed")]
+        public async Task<IActionResult> IsFollowed(string id)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var result = await _kdomFollowService.IsFollowingAsync(id, userId);
+            return Ok(new { isFollowed = result });
+        }
+
+        [HttpGet("trending")]
+        public async Task<IActionResult> GetTrendingKdoms([FromQuery] int days = 7)
+        {
+            var trending = await _kdomService.GetTrendingKdomsAsync(days);
+            return Ok(trending.OrderByDescending(t => t.TotalScore));
+        }
+
+        [Authorize]
+        [HttpGet("suggested")]
+        public async Task<IActionResult> GetSuggestedKdoms()
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var result = await _kdomService.GetSuggestedKdomsAsync(userId);
+            return Ok(result);
         }
 
 

@@ -19,6 +19,10 @@ namespace KDomBackend.Services.Interfaces
         Task<List<KDomReadDto>> GetSiblingsAsync(string kdomId);
         Task<List<CollaboratorReadDto>> GetCollaboratorsAsync(string kdomId, int requesterId);
         Task RemoveCollaboratorAsync(string kdomId, int requesterId, int userIdToRemove);
+        Task CreateSubKDomAsync(string parentId, KDomSubCreateDto dto, int userId);
+        Task<List<KDomSearchResultDto>> SearchAsync(string query);
+        Task<List<KDomTrendingDto>> GetTrendingKdomsAsync(int days = 7);
+        Task<List<KDomSearchResultDto>> GetSuggestedKdomsAsync(int userId, int limit = 10);
 
     }
 }

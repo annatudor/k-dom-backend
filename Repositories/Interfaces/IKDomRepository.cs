@@ -21,6 +21,13 @@ namespace KDomBackend.Repositories.Interfaces
         Task<KDom?> GetParentAsync(string childId);
         Task<List<KDom>> GetSiblingsAsync(string kdomId);
         Task UpdateCollaboratorsAsync(string kdomId, List<int> collaborators);
+        Task<List<KDom>> SearchByQueryAsync(string query);
+        Task<List<KDom>> GetByIdsAsync(IEnumerable<string> ids);
+        Task<List<KDom>> GetBySlugsAsync(IEnumerable<string> slugs);
+
+        Task<Dictionary<string, int>> CountRecentEditsAsync(int days = 7);
+        
+
 
     }
 }

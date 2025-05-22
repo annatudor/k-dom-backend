@@ -84,7 +84,6 @@ public class CollaborationRequestService : ICollaborationRequestService
             Details = $"Approved user {request.UserId} as collaborator.",
             CreatedAt = DateTime.UtcNow
         });
-        var kdom = await _kdomRepository.GetByIdAsync(kdomId);
 
         await _notificationService.CreateNotificationAsync(new NotificationCreateDto
         {
@@ -129,7 +128,6 @@ public class CollaborationRequestService : ICollaborationRequestService
             CreatedAt = DateTime.UtcNow
         });
 
-        var kdom = await _kdomRepository.GetByIdAsync(kdomId);
 
         await _notificationService.CreateNotificationAsync(new NotificationCreateDto
         {

@@ -8,5 +8,7 @@ namespace KDomBackend.Models.DTOs.Post
         public string ContentHtml { get; set; } = string.Empty;
 
         public List<string> Tags { get; set; } = new();
+        public string? KDomId { get; set; }
+
     }
 }

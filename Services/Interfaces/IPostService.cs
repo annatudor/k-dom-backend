@@ -13,6 +13,7 @@ namespace KDomBackend.Services.Interfaces
         Task<List<PostReadDto>> GetPostsByUserIdAsync(int userId);
         Task<List<PostReadDto>> GetFeedAsync(int userId);
         Task<List<PostReadDto>> GetGuestFeedAsync(int limit = 30);
+        Task<List<PostReadDto>> GetPostsByTagAsync(string tag);
 
 
     }

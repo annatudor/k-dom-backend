@@ -1,6 +1,7 @@
 ﻿using KDomBackend.Data;
 using KDomBackend.Models.MongoEntities;
 using KDomBackend.Repositories.Interfaces;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace KDomBackend.Repositories.Implementations
@@ -64,35 +65,67 @@ namespace KDomBackend.Repositories.Implementations
                 .ToListAsync();
         }
 
-        public async Task<List<Post>> GetFeedPostsAsync(List<int> followedUserIds, int limit = 30)
+        public async Task<List<Post>> GetFeedPostsAsync(List<int> followedUserIds, List<string> followedTags, int limit = 30)
         {
-            var filterFollowed = Builders<Post>.Filter.In(p => p.UserId, followedUserIds);
-            var filterOthers = Builders<Post>.Filter.Nin(p => p.UserId, followedUserIds);
+            var filterUser = Builders<Post>.Filter.In(p => p.UserId, followedUserIds);
+            var filterTag = Builders<Post>.Filter.AnyIn(p => p.Tags, followedTags);
 
-            var followedPostsTask = _collection
-                .Find(filterFollowed)
+            var combinedFilter = Builders<Post>.Filter.Or(filterUser, filterTag);
+
+            return await _collection.Find(combinedFilter)
                 .SortByDescending(p => p.CreatedAt)
-                .Limit(limit / 2)
+                .Limit(limit)
                 .ToListAsync();
-
-            var randomPostsTask = _collection
-                .Find(filterOthers)
-                .SortByDescending(p => p.CreatedAt)
-                .Limit(limit / 2)
-                .ToListAsync();
-
-            await Task.WhenAll(followedPostsTask, randomPostsTask);
-
-            return followedPostsTask.Result
-                .Concat(randomPostsTask.Result)
-                .OrderByDescending(p => p.CreatedAt)
-                .ToList();
         }
+
 
         public async Task<List<Post>> GetPublicPostsAsync(int limit = 30)
         {
             return await _collection
                 .Find(_ => true)
+                .SortByDescending(p => p.CreatedAt)
+                .Limit(limit)
+                .ToListAsync();
+        }
+        public async Task<List<Post>> GetByTagAsync(string tag)
+        {
+            var filter = Builders<Post>.Filter.AnyEq(p => p.Tags, tag.ToLower());
+            return await _collection.Find(filter)
+                                    .SortByDescending(p => p.CreatedAt)
+                                    .ToListAsync();
+        }
+
+        public async Task<Dictionary<string, int>> GetRecentTagCountsAsync(int days = 7)
+        {
+            var fromDate = DateTime.UtcNow.AddDays(-days);
+
+            var pipeline = new[]
+            {
+        new BsonDocument("$match", new BsonDocument("createdAt", new BsonDocument("$gte", fromDate))),
+        new BsonDocument("$unwind", "$tags"),
+        new BsonDocument("$group", new BsonDocument
+        {
+            { "_id", "$tags" },
+            { "count", new BsonDocument("$sum", 1) }
+        })
+    };
+
+            var cursor = await _collection.AggregateAsync<BsonDocument>(pipeline);
+            var list = await cursor.ToListAsync();
+
+            return list.ToDictionary(
+                doc => doc["_id"].AsString,
+                doc => doc["count"].AsInt32
+            );
+
+        }
+
+        public async Task<List<Post>> GetRecentPostsByUserAsync(int userId, int limit = 30)
+        {
+            var filter = Builders<Post>.Filter.Eq(p => p.UserId, userId);
+
+            return await _collection
+                .Find(filter)
                 .SortByDescending(p => p.CreatedAt)
                 .Limit(limit)
                 .ToListAsync();
