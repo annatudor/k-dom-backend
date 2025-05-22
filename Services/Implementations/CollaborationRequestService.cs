@@ -1,5 +1,7 @@
 ﻿using KDomBackend.Enums;
 using KDomBackend.Models.DTOs.Collaboration;
+using KDomBackend.Models.DTOs.Notification;
+using KDomBackend.Models.Entities;
 using KDomBackend.Models.MongoEntities;
 using KDomBackend.Repositories.Interfaces;
 using KDomBackend.Services.Implementations;
@@ -10,11 +12,19 @@ public class CollaborationRequestService : ICollaborationRequestService
     private readonly ICollaborationRequestRepository _repository;
     private readonly IKDomRepository _kdomRepository;
     private readonly IUserService _userService;
+    private readonly IAuditLogRepository _auditLogRepository;
+    private readonly INotificationService _notificationService;
 
-    public CollaborationRequestService(ICollaborationRequestRepository repository, IKDomRepository kdomRepository)
+    public CollaborationRequestService(
+        ICollaborationRequestRepository repository, 
+        IKDomRepository kdomRepository, 
+        IAuditLogRepository auditLogRepository, 
+        INotificationService notificationService)
     {
         _repository = repository;
         _kdomRepository = kdomRepository;
+        _auditLogRepository = auditLogRepository;
+        _notificationService = notificationService;
     }
 
     public async Task CreateRequestAsync(string kdomId, int userId, CollaborationRequestCreateDto dto)
@@ -64,6 +74,29 @@ public class CollaborationRequestService : ICollaborationRequestService
             kdom.Collaborators.Add(request.UserId);
             await _kdomRepository.UpdateCollaboratorsAsync(kdom.Id, kdom.Collaborators);
         }
+
+        await _auditLogRepository.CreateAsync(new AuditLog
+        {
+            UserId = reviewerId,
+            Action = AuditAction.ApproveCollaboration,
+            TargetType = AuditTargetType.KDom,
+            TargetId = kdomId,
+            Details = $"Approved user {request.UserId} as collaborator.",
+            CreatedAt = DateTime.UtcNow
+        });
+        var kdom = await _kdomRepository.GetByIdAsync(kdomId);
+
+        await _notificationService.CreateNotificationAsync(new NotificationCreateDto
+        {
+            UserId = request.UserId,
+            Type = NotificationType.SystemMessage,
+            Message = $"Your collaboration request for {kdom.Title} has been approved.",
+            TriggeredByUserId = reviewerId,
+            TargetType = ContentType.KDom,
+            TargetId = kdomId
+        });
+
+
     }
 
     public async Task RejectAsync(string kdomId, string requestId, int reviewerId, string? reason)
@@ -85,6 +118,31 @@ public class CollaborationRequestService : ICollaborationRequestService
         request.RejectionReason = reason;
 
         await _repository.UpdateAsync(request);
+        
+        await _auditLogRepository.CreateAsync(new AuditLog
+        {
+            UserId = reviewerId,
+            Action = AuditAction.RejectCollaboration,
+            TargetType = AuditTargetType.KDom,
+            TargetId = kdomId,
+            Details = $"Rejected user {request.UserId} as collaborator. Reason: {reason ?? "none"}",
+            CreatedAt = DateTime.UtcNow
+        });
+
+        var kdom = await _kdomRepository.GetByIdAsync(kdomId);
+
+        await _notificationService.CreateNotificationAsync(new NotificationCreateDto
+        {
+            UserId = request.UserId,
+            Type = NotificationType.SystemMessage,
+            Message = $"Your collaboration request for {kdom.Title} has been rejected." +
+                      (!string.IsNullOrEmpty(reason) ? $" Reason: {reason}" : ""),
+            TriggeredByUserId = reviewerId,
+            TargetType = ContentType.KDom,
+            TargetId = kdomId
+        });
+
+
     }
 
     public async Task<List<CollaborationRequestReadDto>> GetRequestsAsync(string kdomId, int userId)

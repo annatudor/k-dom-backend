@@ -15,6 +15,10 @@
         EditKDom,
         DeletePost,
         DeleteComment,
-        ChangeRole
+        ChangeRole,
+        ApproveCollaboration,
+        RejectCollaboration,
+        RemoveCollaborator
+
     }
 }

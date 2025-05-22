@@ -452,7 +452,31 @@ namespace KDomBackend.Services.Implementations
 
             kdom.Collaborators.Remove(userIdToRemove);
             await _kdomRepository.UpdateCollaboratorsAsync(kdomId, kdom.Collaborators);
+
+            await _auditLogRepository.CreateAsync(new AuditLog
+            {
+                UserId = requesterId,
+                Action = AuditAction.RemoveCollaborator,
+                TargetType = AuditTargetType.KDom,
+                TargetId = kdomId,
+                Details = $"Removed user {userIdToRemove} from collaborators.",
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await _notificationService.CreateNotificationAsync(new NotificationCreateDto
+            {
+                UserId = userIdToRemove,
+                Type = NotificationType.SystemMessage,
+                Message = $"You have been removed from {kdom.Title} collaborators.",
+                TriggeredByUserId = requesterId,
+                TargetType = ContentType.KDom,
+                TargetId = kdomId
+            });
+
+
+
         }
+
 
 
     }
