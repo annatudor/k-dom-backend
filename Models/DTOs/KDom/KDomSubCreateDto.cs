@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using KDomBackend.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace KDomBackend.Models.DTOs.KDom
 {
@@ -13,6 +14,6 @@ namespace KDomBackend.Models.DTOs.KDom
         [Required]
         public string ContentHtml { get; set; } = string.Empty;
 
-        public string Theme { get; set; } = "light";
+        public KDomTheme Theme { get; set; } = KDomTheme.Light;
     }
 }

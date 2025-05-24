@@ -9,6 +9,7 @@ using BCrypt.Net;
 using KDomBackend.Models.MongoEntities;
 using KDomBackend.Enums;
 using KDomBackend.Models.DTOs.Common;
+using MongoDB.Driver;
 
 namespace KDomBackend.Services.Implementations
 {
@@ -20,14 +21,16 @@ namespace KDomBackend.Services.Implementations
         private readonly IUserProfileRepository _profileRepository;
         private readonly IFollowRepository _followRepository;
         private readonly IAuditLogRepository _auditLogRepository;
+        private readonly MongoDbContext _mongoDbContext;
 
 
         public UserService(
             IUserRepository userRepository, 
-            JwtHelper jwtHelper, 
+            JwtHelper jwtHelper,
             IPasswordResetRepository passwordResetRepository,
-            IUserProfileRepository profileRepository, 
-            IFollowRepository followRepository, IAuditLogRepository auditLogRepository
+            IUserProfileRepository profileRepository,
+            IFollowRepository followRepository, IAuditLogRepository auditLogRepository,
+            MongoDbContext mongoDbContext
             )
         {
             _userRepository = userRepository;
@@ -36,6 +39,7 @@ namespace KDomBackend.Services.Implementations
             _profileRepository = profileRepository;
             _followRepository = followRepository;
             _auditLogRepository = auditLogRepository;
+            _mongoDbContext = mongoDbContext;
         }
 
 
@@ -201,7 +205,7 @@ namespace KDomBackend.Services.Implementations
             return user?.Username ?? "unknown";
         }
 
-        public async Task<UserProfileDto> GetUserProfileAsync(int userId)
+        public async Task<UserProfileReadDto> GetUserProfileAsync(int userId)
         {
             var user = await _userRepository.GetByIdAsync(userId);
             if (user == null)
@@ -212,13 +216,14 @@ namespace KDomBackend.Services.Implementations
             var followersCount = await _followRepository.GetFollowersCountAsync(userId);
             var followingCount = await _followRepository.GetFollowingCountAsync(userId);
 
-            return new UserProfileDto
+            return new UserProfileReadDto
             {
                 UserId = user.Id,
                 Username = user.Username,
                 Nickname = profile?.Nickname ?? "",
                 AvatarUrl = profile?.AvatarUrl ?? "",
                 Bio = profile?.Bio ?? "",
+                ProfileTheme = profile.ProfileTheme,
                 FollowersCount = followersCount,
                 FollowingCount = followingCount,
                 JoinedAt = user.CreatedAt
@@ -236,6 +241,7 @@ namespace KDomBackend.Services.Implementations
                     UserId = userId,
                     Nickname = dto.Nickname,
                     Bio = dto.Bio,
+                    ProfileTheme = dto.ProfileTheme,
                     AvatarUrl = dto.AvatarUrl,
                     JoinedAt = DateTime.UtcNow
                 };
@@ -246,6 +252,7 @@ namespace KDomBackend.Services.Implementations
             {
                 profile.Nickname = dto.Nickname;
                 profile.Bio = dto.Bio;
+                profile.ProfileTheme = dto.ProfileTheme;
                 profile.AvatarUrl = dto.AvatarUrl;
 
                 await _profileRepository.UpdateAsync(profile);
@@ -304,6 +311,31 @@ namespace KDomBackend.Services.Implementations
         public async Task<User?> GetUserByUsernameAsync(string username)
         {
             return await _userRepository.GetByUsernameAsync(username);
+        }
+
+        public async Task AddRecentlyViewedKDomAsync(int userId, string kdomId)
+        {
+            var filter = Builders<UserProfile>.Filter.Eq(p => p.UserId, userId);
+            var profile = await _mongoDbContext.UserProfiles.Find(filter).FirstOrDefaultAsync();
+
+            if (profile == null) return;
+
+            profile.RecentlyViewedKDomIds.Remove(kdomId);
+            profile.RecentlyViewedKDomIds.Insert(0, kdomId);
+
+            if (profile.RecentlyViewedKDomIds.Count > 3)
+                profile.RecentlyViewedKDomIds = profile.RecentlyViewedKDomIds.Take(3).ToList();
+
+            await _mongoDbContext.UserProfiles.ReplaceOneAsync(filter, profile);
+        }
+
+        public async Task<List<string>> GetRecentlyViewedKDomIdsAsync(int userId)
+        {
+            var profile = await _mongoDbContext.UserProfiles
+                .Find(p => p.UserId == userId)
+                .FirstOrDefaultAsync();
+
+            return profile?.RecentlyViewedKDomIds ?? new();
         }
 
 

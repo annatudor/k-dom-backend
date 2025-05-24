@@ -79,5 +79,11 @@ public class KDomFollowRepository : IKDomFollowRepository
         return kdoms.Select(k => k.Slug).ToList();
     }
 
+    public async Task<int> CountFollowersAsync(string kdomId)
+    {
+        var filter = Builders<KDomFollow>.Filter.Eq(f => f.KDomId, kdomId);
+        return (int)await _collection.CountDocumentsAsync(filter);
+    }
+
 
 }

@@ -70,6 +70,7 @@ builder.Services.AddScoped<KDomTagHelper>();
 builder.Services.AddScoped<IKDomFollowRepository, KDomFollowRepository>();
 builder.Services.AddScoped<IKDomFollowService, KDomFollowService>();
 builder.Services.AddScoped<IKDomEditRepository, KDomEditRepository>();
+builder.Services.AddScoped<ISearchService, SearchService>();
 
 
 

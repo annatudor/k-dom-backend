@@ -6,7 +6,7 @@ namespace KDomBackend.Services.Interfaces
     {
         Task FollowAsync(string kdomId, int userId);
         Task UnfollowAsync(string kdomId, int userId);
-        Task<List<KDomSearchResultDto>> GetFollowedKDomsAsync(int userId);
+        Task<List<KDomTagSearchResultDto>> GetFollowedKDomsAsync(int userId);
         Task<bool> IsFollowingAsync(string kdomId, int userId);
 
 

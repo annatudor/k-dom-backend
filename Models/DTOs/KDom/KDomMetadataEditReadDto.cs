@@ -11,7 +11,7 @@ namespace KDomBackend.Models.DTOs.KDom
         public Language PreviousLanguage { get; set; }
         public Hub PreviousHub { get; set; }
         public bool PreviousIsForKids { get; set; }
-        public string PreviousTheme { get; set; } = "light";
+        public KDomTheme PreviousTheme { get; set; } = KDomTheme.Light;
         public DateTime EditedAt { get; set; }
     }
 }

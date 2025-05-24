@@ -18,14 +18,21 @@ namespace KDomBackend.Controllers
         private readonly IKDomRepository _repository;
         private readonly ICollaborationRequestService _collaborationRequestService;
         private readonly IKDomFollowService _kdomFollowService;
+        private readonly IKDomFollowRepository _kdomFollowRepository;
         public KDomController(
             IKDomService kdomService, 
             IKDomRepository repository, 
-            ICollaborationRequestService collaborationRequestService)
+            ICollaborationRequestService collaborationRequestService,
+            IKDomFollowService kdomFollowService,
+            IKDomFollowRepository kdomFollowRepository
+            )
         {
             _kdomService = kdomService;
             _repository = repository;
             _collaborationRequestService = collaborationRequestService;
+            _kdomFollowService = kdomFollowService;
+            _kdomFollowRepository = kdomFollowRepository;
+
         }
 
         [Authorize]
@@ -221,10 +228,19 @@ namespace KDomBackend.Controllers
 
         [HttpGet("hubs")]
         public IActionResult GetAvailableHubs()
+        
         {
             var values = Enum.GetNames(typeof(Hub));
             return Ok(values);
         }
+        [HttpGet("themes")]
+        
+        public IActionResult GetAvailableThemes()
+        {
+            var themes = Enum.GetNames(typeof(KDomTheme));
+            return Ok(themes);
+        }
+
 
         [Authorize]
         [HttpPost("{id}/collab-requests")]
@@ -346,13 +362,13 @@ namespace KDomBackend.Controllers
             }
         }
 
-        [HttpGet("search")]
-        public async Task<IActionResult> Search([FromQuery] string query)
+        [HttpGet("search-tag-slug")]
+        public async Task<IActionResult> SearchTagOrSlug([FromQuery] string query)
         {
             if (string.IsNullOrWhiteSpace(query))
                 return BadRequest(new { error = "'query' field is required." });
 
-            var results = await _kdomService.SearchAsync(query.Trim());
+            var results = await _kdomService.SearchTagOrSlugAsync(query.Trim());
             return Ok(results);
         }
 
@@ -422,6 +438,13 @@ namespace KDomBackend.Controllers
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var result = await _kdomService.GetSuggestedKdomsAsync(userId);
             return Ok(result);
+        }
+
+        [HttpGet("{id}/followers/count")]
+        public async Task<IActionResult> GetKDomFollowersCount(string id)
+        {
+            var count = await _kdomFollowRepository.CountFollowersAsync(id);
+            return Ok(new { count });
         }
 
 

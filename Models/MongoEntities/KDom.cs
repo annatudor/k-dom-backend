@@ -24,7 +24,8 @@ namespace KDomBackend.Models.MongoEntities
         public Hub Hub { get; set; } 
 
         public bool IsForKids { get; set; } = false;
-        public string Theme { get; set; } = "light";
+        [BsonRepresentation(BsonType.String)]
+        public KDomTheme Theme { get; set; } = KDomTheme.Light;
         public string Status { get; set; } = "pending";
         public string ContentHtml { get; set; } = string.Empty;
         public int UserId { get; set; }

@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using KDomBackend.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace KDomBackend.Models.DTOs.User
 {
@@ -9,6 +10,9 @@ namespace KDomBackend.Models.DTOs.User
 
         [MaxLength(250)]
         public string Bio { get; set; } = string.Empty;
+        
+        public ProfileTheme ProfileTheme { get; set; } = ProfileTheme.Default;
+
 
         [Url]
         public string AvatarUrl { get; set; } = string.Empty;

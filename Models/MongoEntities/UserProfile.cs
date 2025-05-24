@@ -1,10 +1,12 @@
-﻿using MongoDB.Bson;
+﻿using KDomBackend.Enums;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace KDomBackend.Models.MongoEntities
 {
     public class UserProfile
     {
+        [BsonRepresentation(BsonType.ObjectId)]
         [BsonId]
         public int UserId { get; set; }
 
@@ -12,5 +14,12 @@ namespace KDomBackend.Models.MongoEntities
         public string AvatarUrl { get; set; } = string.Empty;
         public string Bio { get; set; } = string.Empty;
         public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
+        
+        [BsonRepresentation(BsonType.String)]
+        public ProfileTheme ProfileTheme { get; set; } = ProfileTheme.Default;
+
+        public List<string> RecentlyViewedKDomIds { get; set; } = new();
+
+
     }
 }

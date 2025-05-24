@@ -549,11 +549,11 @@ namespace KDomBackend.Services.Implementations
             }
         }
 
-        public async Task<List<KDomSearchResultDto>> SearchAsync(string query)
+        public async Task<List<KDomTagSearchResultDto>> SearchTagOrSlugAsync(string query)
         {
-            var results = await _kdomRepository.SearchByQueryAsync(query);
+            var results = await _kdomRepository.SearchTitleOrSlugByQueryAsync(query);
 
-            return results.Select(k => new KDomSearchResultDto
+            return results.Select(k => new KDomTagSearchResultDto
             {
                 Id = k.Id,
                 Title = k.Title,
@@ -601,7 +601,7 @@ namespace KDomBackend.Services.Implementations
             return result;
         }
 
-        public async Task<List<KDomSearchResultDto>> GetSuggestedKdomsAsync(int userId, int limit = 10)
+        public async Task<List<KDomTagSearchResultDto>> GetSuggestedKdomsAsync(int userId, int limit = 10)
         {
             var followedSlugs = await _kdomFollowRepository.GetFollowedSlugsAsync(userId);
 
@@ -628,11 +628,39 @@ namespace KDomBackend.Services.Implementations
 
             var suggestedKdoms = await _kdomRepository.GetBySlugsAsync(suggestedSlugs);
 
-            return suggestedKdoms.Select(k => new KDomSearchResultDto
+            return suggestedKdoms.Select(k => new KDomTagSearchResultDto
             {
                 Id = k.Id,
                 Title = k.Title,
                 Slug = k.Slug
+            }).ToList();
+        }
+
+        public async Task<List<KDomDisplayDto>> GetKdomsForUserAsync(int userId)
+        {
+            var kdoms = await _kdomRepository.GetOwnedOrCollaboratedByUserAsync(userId);
+
+            return kdoms.Select(k => new KDomDisplayDto
+            {
+                Id = k.Id,
+                Title = k.Title,
+                Slug = k.Slug,
+                Description = k.Description
+            }).ToList();
+        }
+        public async Task<List<KDomDisplayDto>> GetRecentlyViewedKdomsAsync(int userId)
+        {
+            var ids = await _userService.GetRecentlyViewedKDomIdsAsync(userId);
+            if (!ids.Any()) return new();
+
+            var kdoms = await _kdomRepository.GetByIdsAsync(ids);
+
+            return kdoms.Select(k => new KDomDisplayDto
+            {
+                Id = k.Id,
+                Title = k.Title,
+                Slug = k.Slug,
+                Description = k.Description
             }).ToList();
         }
 

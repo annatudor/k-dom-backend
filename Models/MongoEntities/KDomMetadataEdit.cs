@@ -24,7 +24,8 @@ namespace KDomBackend.Models.MongoEntities
         public Hub PreviousHub { get; set; } 
 
         public bool PreviousIsForKids { get; set; }
-        public string PreviousTheme { get; set; } = "light";
+        [BsonRepresentation(BsonType.String)] 
+        public KDomTheme PreviousTheme { get; set; } = KDomTheme.Light;
 
         public string? EditNote { get; set; }
         public DateTime EditedAt { get; set; } = DateTime.UtcNow;

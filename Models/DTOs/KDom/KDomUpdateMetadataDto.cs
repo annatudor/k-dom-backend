@@ -14,6 +14,6 @@ public class KDomUpdateMetadataDto
     public Hub Hub { get; set; }
     public Language Language { get; set; } 
     public bool IsForKids { get; set; }
-    public string Theme { get; set; } = "light";
+    public KDomTheme Theme { get; set; } = KDomTheme.Light;
     public DateTime UpdatedAt { get; set; }
 }

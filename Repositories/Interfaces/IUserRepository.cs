@@ -18,6 +18,7 @@ namespace KDomBackend.Repositories.Interfaces
         Task<int> CountAsync(string? role = null, string? search = null);
         Task<User?> GetUserByUsernameAsync(string username);
         Task<List<User>> GetUsersByRolesAsync(string[] roles);
+        Task<List<User>> SearchUsersAsync(string query);
 
 
     }

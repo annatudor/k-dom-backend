@@ -196,6 +196,14 @@ namespace KDomBackend.Repositories.Implementations
             return (await conn.QueryAsync<User>(sql, new { Roles = roles.Select(r => r.ToLower()) })).ToList();
         }
 
+        public async Task<List<User>> SearchUsersAsync(string query)
+        {
+            using var conn = _context.CreateConnection();
+            const string sql = @"SELECT id, username FROM users WHERE username LIKE CONCAT('%', @Query, '%') LIMIT 10";
+
+            return (await conn.QueryAsync<User>(sql, new { Query = query })).ToList();
+        }
+
 
     }
 }

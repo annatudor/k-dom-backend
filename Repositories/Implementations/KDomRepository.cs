@@ -159,7 +159,7 @@ namespace KDomBackend.Repositories.Implementations
             var update = Builders<KDom>.Update.Set(k => k.Collaborators, collaborators);
             await _collection.UpdateOneAsync(k => k.Id == kdomId, update);
         }
-        public async Task<List<KDom>> SearchByQueryAsync(string query)
+        public async Task<List<KDom>> SearchTitleOrSlugByQueryAsync(string query)
         {
             var filter = Builders<KDom>.Filter.Or(
                 Builders<KDom>.Filter.Regex(k => k.Title, new MongoDB.Bson.BsonRegularExpression(query, "i")),
@@ -190,14 +190,14 @@ namespace KDomBackend.Repositories.Implementations
 
             var pipeline = new[]
             {
-        new BsonDocument("$match", new BsonDocument("editedAt",
-            new BsonDocument("$gte", fromDate))),
-        new BsonDocument("$group", new BsonDocument
-        {
-            { "_id", "$kdomId" },
-            { "count", new BsonDocument("$sum", 1) }
-        })
-    };
+                new BsonDocument("$match", new BsonDocument("editedAt",
+                new BsonDocument("$gte", fromDate))),
+                new BsonDocument("$group", new BsonDocument
+                {
+                    { "_id", "$kdomId" },
+                     { "count", new BsonDocument("$sum", 1) }
+                })
+            };
 
             var cursor = await _collection.AggregateAsync<BsonDocument>(pipeline);
             var list = await cursor.ToListAsync();
@@ -206,6 +206,26 @@ namespace KDomBackend.Repositories.Implementations
                 doc => doc["_id"].AsString,
                 doc => doc["count"].AsInt32
             );
+        }
+
+        public async Task<List<KDom>> SearchByQueryAsync(string query)
+        {
+            var filter = Builders<KDom>.Filter.Or(
+                Builders<KDom>.Filter.Regex(k => k.Title, new MongoDB.Bson.BsonRegularExpression(query, "i")),
+                Builders<KDom>.Filter.Regex(k => k.Slug, new MongoDB.Bson.BsonRegularExpression(query, "i"))
+            );
+
+            return await _collection.Find(filter).Limit(10).ToListAsync();
+        }
+
+        public async Task<List<KDom>> GetOwnedOrCollaboratedByUserAsync(int userId)
+        {
+            var filter = Builders<KDom>.Filter.Or(
+                Builders<KDom>.Filter.Eq(k => k.UserId, userId),
+                Builders<KDom>.Filter.AnyEq(k => k.Collaborators, userId)
+            );
+
+            return await _collection.Find(filter).ToListAsync();
         }
 
 

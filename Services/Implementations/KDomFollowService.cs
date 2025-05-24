@@ -43,13 +43,13 @@ public class KDomFollowService : IKDomFollowService
         await _followRepository.UnfollowAsync(userId, kdomId);
     }
 
-    public async Task<List<KDomSearchResultDto>> GetFollowedKDomsAsync(int userId)
+    public async Task<List<KDomTagSearchResultDto>> GetFollowedKDomsAsync(int userId)
     {
         var followedIds = await _followRepository.GetFollowedKDomIdsAsync(userId);
 
         var all = await _kdomRepository.GetByIdsAsync(followedIds);
 
-        return all.Select(k => new KDomSearchResultDto
+        return all.Select(k => new KDomTagSearchResultDto
         {
             Id = k.Id,
             Title = k.Title,

@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using KDomBackend.Services.Interfaces;
 using KDomBackend.Models.DTOs.User;
+using KDomBackend.Enums;
+using KDomBackend.Services.Implementations;
 
 namespace KDomBackend.Controllers
 {
@@ -11,10 +13,12 @@ namespace KDomBackend.Controllers
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
+        private readonly IKDomService _kdomService;
 
-        public UserController(IUserService userService)
+        public UserController(IUserService userService, IKDomService kdomService)
         {
             _userService = userService;
+            _kdomService = kdomService;
         }
 
         [HttpGet("{id}/profile")]
@@ -79,6 +83,28 @@ namespace KDomBackend.Controllers
             return Ok(result);
         }
 
+        [HttpGet("profile/themes")]
+        public IActionResult GetProfileThemes()
+        {
+            var themes = Enum.GetNames(typeof(ProfileTheme));
+            return Ok(themes);
+        }
+
+        [HttpGet("{id}/kdoms")]
+        public async Task<IActionResult> GetKdomsForUser(int id)
+        {
+            var result = await _kdomService.GetKdomsForUserAsync(id);
+            return Ok(result);
+        }
+
+        [Authorize]
+        [HttpGet("recently-viewed-kdoms")]
+        public async Task<IActionResult> GetRecentlyViewedKdoms()
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var result = await _kdomService.GetRecentlyViewedKdomsAsync(userId);
+            return Ok(result);
+        }
 
     }
 }

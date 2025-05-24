@@ -15,7 +15,9 @@ namespace KDomBackend.Models.DTOs.KDom
         [Required]
         public Hub Hub { get; set; }
         public bool IsForKids { get; set; } = false;
-        public string Theme { get; set; } = "light";
+        [Required]
+        public KDomTheme Theme { get; set; } = KDomTheme.Light;
+
         public string ContentHtml { get; set; } = string.Empty;
     }
 
