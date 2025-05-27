@@ -12,7 +12,10 @@ namespace KDomBackend.Models.MongoEntities
         public string Id { get; set; } = string.Empty;
 
         public string CommentId { get; set; } = string.Empty;
+
+        [BsonRepresentation(BsonType.Int32)]
         public int UserId { get; set; }
+
         public string Text { get; set; } = string.Empty;
         public DateTime EditedAt { get; set; } = DateTime.UtcNow;
       

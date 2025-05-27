@@ -151,7 +151,7 @@ namespace KDomBackend.Controllers
             return Ok(posts);
         }
 
-        [HttpGet]
+        [HttpGet("by-tag")]
         public async Task<IActionResult> GetByTag([FromQuery] string tag)
         {
             if (string.IsNullOrWhiteSpace(tag))

@@ -9,7 +9,10 @@ public class KDomCollaborationRequest
     public string Id { get; set; } = string.Empty;
 
     public string KDomId { get; set; } = string.Empty;
+
+    [BsonRepresentation(BsonType.Int32)]
     public int UserId { get; set; }
+
     [BsonRepresentation(BsonType.String)]
     public CollaborationRequestStatus Status { get; set; } = CollaborationRequestStatus.Pending;
     public string? Message { get; set; } = null;

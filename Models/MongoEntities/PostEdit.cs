@@ -8,7 +8,10 @@ public class PostEdit
     public string Id { get; set; } = string.Empty;
 
     public string PostId { get; set; } = string.Empty;
+
+    [BsonRepresentation(BsonType.Int32)]
     public int UserId { get; set; }
+    
     public string ContentHtml { get; set; } = string.Empty;
     public DateTime EditedAt { get; set; } = DateTime.UtcNow;
 }

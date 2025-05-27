@@ -13,7 +13,9 @@ namespace KDomBackend.Models.MongoEntities
             [BsonRepresentation(BsonType.ObjectId)]
             public string Id { get; set; } = string.Empty;
 
+            [BsonRepresentation(BsonType.Int32)]
             public int UserId { get; set; }
+
             public string KDomId { get; set; } = string.Empty;
 
             public DateTime FollowedAt { get; set; } = DateTime.UtcNow;

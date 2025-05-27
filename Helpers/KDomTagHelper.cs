@@ -20,7 +20,7 @@ namespace KDomBackend.Helpers
 
             var kdom = await _kdomRepository.GetByIdAsync(kdomId);
             if (kdom == null)
-                throw new Exception("K-Dom asociat inexistent.");
+                throw new Exception("K-Dom does not exist.");
 
             tags.Add(kdom.Slug);
 

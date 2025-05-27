@@ -12,7 +12,10 @@ namespace KDomBackend.Models.MongoEntities
         public string? ParentId { get; set; }
 
         public string KDomId { get; set; } = string.Empty;
+        
+        [BsonRepresentation(BsonType.Int32)]
         public int UserId { get; set; }
+        
         public string? PreviousParentId { get; set; }
 
         public string PreviousTitle { get; set; } = string.Empty;

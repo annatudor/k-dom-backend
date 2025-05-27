@@ -9,11 +9,13 @@ public class FollowService : IFollowService
 {
     private readonly IFollowRepository _repository;
     private readonly INotificationService _notificationService;
+    private readonly IUserRepository _userRepository;
 
-    public FollowService(IFollowRepository repository, INotificationService notificationService)
+    public FollowService(IFollowRepository repository, INotificationService notificationService, IUserRepository userRepository)
     {
         _repository = repository;
         _notificationService = notificationService;
+        _userRepository = userRepository;
     }
 
     public async Task FollowUserAsync(int followerId, int followingId)
@@ -49,18 +51,10 @@ public class FollowService : IFollowService
         await _repository.DeleteAsync(followerId, followingId);
     }
 
-    private readonly IFollowRepository _followRepository;
-    private readonly IUserRepository _userRepository;
-
-    public FollowService(IFollowRepository followRepository, IUserRepository userRepository)
-    {
-        _followRepository = followRepository;
-        _userRepository = userRepository;
-    }
 
     public async Task<List<UserPublicDto>> GetFollowersAsync(int userId)
     {
-        var ids = await _followRepository.GetFollowersAsync(userId);
+        var ids = await _repository.GetFollowersAsync(userId);
         var users = new List<UserPublicDto>();
 
         foreach (var id in ids)
@@ -82,7 +76,7 @@ public class FollowService : IFollowService
 
     public async Task<List<UserPublicDto>> GetFollowingAsync(int userId)
     {
-        var ids = await _followRepository.GetFollowingAsync(userId);
+        var ids = await _repository.GetFollowingAsync(userId);
         var users = new List<UserPublicDto>();
 
         foreach (var id in ids)
@@ -102,10 +96,10 @@ public class FollowService : IFollowService
     }
 
     public Task<int> GetFollowersCountAsync(int userId)
-    => _followRepository.GetFollowersCountAsync(userId);
+    => _repository.GetFollowersCountAsync(userId);
 
     public Task<int> GetFollowingCountAsync(int userId)
-        => _followRepository.GetFollowingCountAsync(userId);
+        => _repository.GetFollowingCountAsync(userId);
 
 
 }

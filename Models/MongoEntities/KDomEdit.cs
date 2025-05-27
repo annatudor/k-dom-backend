@@ -8,6 +8,8 @@ public class KDomEdit
     public string Id { get; set; } = string.Empty;
 
     public string KDomId { get; set; } = string.Empty;
+
+    [BsonRepresentation(BsonType.Int32)]
     public int UserId { get; set; }
 
     public string PreviousContentHtml { get; set; } = string.Empty;

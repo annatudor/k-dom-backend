@@ -24,7 +24,7 @@ namespace KDomBackend.Controllers
             return Ok(logs);
         }
 
-        [HttpGet]
+        [HttpGet("filter")]
         [Authorize(Roles = "admin")]
         public async Task<IActionResult> GetFiltered([FromQuery] AuditLogFilterDto filters)
         {

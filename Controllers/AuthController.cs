@@ -7,7 +7,7 @@ using System.Security.Claims;
 namespace KDomBackend.Controllers
 {
     [ApiController]
-    [Route("api/users")]
+    [Route("api/auth")]
     public class AuthController : ControllerBase
     {
         private readonly IUserService _userService;
