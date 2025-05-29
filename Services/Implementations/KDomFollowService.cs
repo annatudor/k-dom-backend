@@ -63,5 +63,10 @@ public class KDomFollowService : IKDomFollowService
         return await _followRepository.ExistsAsync(userId, kdomId);
     }
 
+    public async Task<int> GetFollowersCountAsync(string kdomId)
+    {
+        return await _followRepository.CountFollowersAsync(kdomId);
+    }
+
 
 }

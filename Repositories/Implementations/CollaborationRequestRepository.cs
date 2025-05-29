@@ -4,14 +4,9 @@ using KDomBackend.Repositories.Interfaces;
 using MongoDB.Driver;
 using KDomBackend.Enums;
 
-public class CollaborationRequestRepository : ICollaborationRequestRepository
+public class CollaborationRequestRepository(MongoDbContext context) : ICollaborationRequestRepository
 {
-    private readonly IMongoCollection<KDomCollaborationRequest> _collection;
-
-    public CollaborationRequestRepository(MongoDbContext context)
-    {
-        _collection = context.KDomCollaborationRequests;
-    }
+    private readonly IMongoCollection<KDomCollaborationRequest> _collection = context.KDomCollaborationRequests;
 
     public async Task CreateAsync(KDomCollaborationRequest request)
     {

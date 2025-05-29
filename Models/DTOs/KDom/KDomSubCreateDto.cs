@@ -1,4 +1,6 @@
 ﻿using KDomBackend.Enums;
+using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson;
 using System.ComponentModel.DataAnnotations;
 
 namespace KDomBackend.Models.DTOs.KDom
@@ -13,7 +15,7 @@ namespace KDomBackend.Models.DTOs.KDom
 
         [Required]
         public string ContentHtml { get; set; } = string.Empty;
-
+        [BsonRepresentation(BsonType.String)]
         public KDomTheme Theme { get; set; } = KDomTheme.Light;
     }
 }

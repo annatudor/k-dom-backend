@@ -1,4 +1,5 @@
 using Dapper;
+using Spryer;
 using System.Text;
 using KDomBackend.Data;
 using KDomBackend.Enums;
@@ -14,20 +15,63 @@ using KDomBackend.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.SignalR;
 using KDomBackend.Services.Validation;
+using Microsoft.OpenApi.Models;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+DbEnum<AuditAction>.Initialize();
+DbEnum<AuditTargetType>.Initialize();
+DbEnum<ContentType>.Initialize();
 
-builder.Services.AddControllers();
+// Add services to the container
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "KDom API",
+        Version = "v1",
+        Description = "API documentation for KDom project",
+    });
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "JWT Authorization header using the Bearer scheme."
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
 
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDbSettings"));
-builder.Services.Configure<JwtSettings>(
-    builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<GoogleOAuthSettings>(
     builder.Configuration.GetSection("GoogleOAuth"));
 
@@ -39,20 +83,17 @@ builder.Services.AddSingleton<IMongoClient>(sp =>
 
 builder.Services.AddSingleton<DatabaseContext>();
 builder.Services.AddSingleton<MongoDbContext>();
-builder.Services.AddSingleton(sp =>
-    sp.GetRequiredService<IOptions<JwtSettings>>().Value);
+builder.Services.AddSingleton<JwtHelper>();
 
-builder.Services.AddScoped<JwtHelper>();
+
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPasswordResetRepository, PasswordResetRepository>();
 builder.Services.AddScoped<IGoogleAuthService, GoogleAuthService>();
 builder.Services.AddScoped<IKDomRepository, KDomRepository>();
-builder.Services.AddScoped<IKDomService, KDomService>();
 builder.Services.AddScoped<ICommentRepository, CommentRepository>();
 builder.Services.AddScoped<ICommentService, CommentService>();
 builder.Services.AddScoped<IPostRepository, PostRepository>();
-builder.Services.AddScoped<IPostService, PostService>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IFollowRepository, FollowRepository>();
@@ -71,20 +112,22 @@ builder.Services.AddScoped<IKDomFollowRepository, KDomFollowRepository>();
 builder.Services.AddScoped<IKDomFollowService, KDomFollowService>();
 builder.Services.AddScoped<IKDomEditRepository, KDomEditRepository>();
 builder.Services.AddScoped<ISearchService, SearchService>();
-
-
-
-SqlMapper.AddTypeHandler(new EnumAsStringHandler<AuditAction>());
-SqlMapper.AddTypeHandler(new EnumAsStringHandler<AuditTargetType>());
-SqlMapper.AddTypeHandler(new EnumAsStringHandler<ContentType>());
-SqlMapper.AddTypeHandler(new EnumAsStringHandler<KDomBackend.Enums.AuditAction>());
-
+builder.Services.AddScoped<IKDomReadService, KDomReadService>();
+builder.Services.AddScoped<IKDomFlowService, KDomFlowService>();
+builder.Services.AddScoped<IPostFlowService, PostFlowService>();
+builder.Services.AddScoped<IPostReadService, PostReadService>();
+builder.Services.AddScoped<IUserProfileService, UserProfileService>();
+builder.Services.AddScoped<IUserAdminService, UserAdminService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 var jwtConfig = builder.Configuration.GetSection("Jwt");
 var key = Encoding.UTF8.GetBytes(jwtConfig["SecretKey"]);
+var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
+builder.Services.AddSingleton(jwtSettings);
 
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -116,7 +159,6 @@ builder.Services.AddAuthentication("Bearer")
 
     });
 
-
 builder.Services.AddSignalR();
 builder.Services.AddAuthorization();
 builder.Services.AddSingleton<IUserIdProvider, NameIdentifierUserIdProvider>();
@@ -131,8 +173,7 @@ builder.Services.AddCors(options =>
         });
 });
 
-
-
+DefaultTypeMap.MatchNamesWithUnderscores = true;
 
 var app = builder.Build();
 
@@ -140,7 +181,12 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "KDom API v1");
+    });
+
 }
 
 app.UseCors("AllowFrontend");

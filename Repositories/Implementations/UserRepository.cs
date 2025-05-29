@@ -71,7 +71,18 @@ namespace KDomBackend.Repositories.Implementations
         public async Task<User?> GetByIdAsync(int id)
         {
             using var conn = _context.CreateConnection();
-            const string sql = "SELECT * FROM users WHERE id = @Id";
+            const string sql = @"SELECT 
+                id, 
+                username, 
+                email, 
+                password_hash AS PasswordHash, 
+                provider, 
+                provider_id, 
+                role_id, 
+                created_at, 
+                is_active
+                FROM users 
+                WHERE id = @Id";
             return await conn.QueryFirstOrDefaultAsync<User>(sql, new { Id = id });
         }
 

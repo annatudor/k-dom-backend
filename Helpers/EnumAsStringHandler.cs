@@ -10,7 +10,9 @@ public class EnumAsStringHandler<T> : SqlMapper.TypeHandler<T> where T : struct,
 
     public override void SetValue(IDbDataParameter parameter, T value)
     {
+        Console.WriteLine($"[HANDLER] Writing enum {typeof(T).Name} = {value}");
         parameter.Value = value.ToString();
         parameter.DbType = DbType.String;
     }
+
 }

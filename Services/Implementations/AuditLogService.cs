@@ -37,7 +37,7 @@ namespace KDomBackend.Services.Implementations
             var query = all.AsQueryable();
 
             if (filters.Action.HasValue)
-                query = query.Where(a => a.Action == filters.Action.Value);
+                query = query.Where(a => a.Action.Equals(filters.Action.Value));
 
             if (filters.UserId.HasValue)
                 query = query.Where(a => a.UserId == filters.UserId.Value);

@@ -29,7 +29,7 @@ namespace KDomBackend.Repositories.Interfaces
 
         Task<List<KDom>> SearchByQueryAsync(string query);
         Task<List<KDom>> GetOwnedOrCollaboratedByUserAsync(int userId);
-
+        Task<KDom?> GetBySlugAsync(string slug);
 
 
     }

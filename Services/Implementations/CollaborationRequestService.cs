@@ -19,12 +19,14 @@ public class CollaborationRequestService : ICollaborationRequestService
         ICollaborationRequestRepository repository, 
         IKDomRepository kdomRepository, 
         IAuditLogRepository auditLogRepository, 
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IUserService userService)
     {
         _repository = repository;
         _kdomRepository = kdomRepository;
         _auditLogRepository = auditLogRepository;
         _notificationService = notificationService;
+        _userService = userService;
     }
 
     public async Task CreateRequestAsync(string kdomId, int userId, CollaborationRequestCreateDto dto)

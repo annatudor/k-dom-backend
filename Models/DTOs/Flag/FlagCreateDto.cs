@@ -1,12 +1,13 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using KDomBackend.Enums;
+using Spryer;
 
 namespace KDomBackend.Models.DTOs.Flag
 {
     public class FlagCreateDto
     {
         [Required]
-        public ContentType ContentType { get; set; }
+        public DbEnum<ContentType> ContentType { get; set; }
 
         [Required]
         public string ContentId { get; set; } = string.Empty;

@@ -14,24 +14,21 @@ namespace KDomBackend.Controllers
     [Route("api/kdoms")]
     public class KDomController : ControllerBase
     {
-        private readonly IKDomService _kdomService;
-        private readonly IKDomRepository _repository;
+        private readonly IKDomReadService _kdomReadService;
         private readonly ICollaborationRequestService _collaborationRequestService;
         private readonly IKDomFollowService _kdomFollowService;
-        private readonly IKDomFollowRepository _kdomFollowRepository;
+        private readonly IKDomFlowService _kdomFlowService;
         public KDomController(
-            IKDomService kdomService, 
-            IKDomRepository repository, 
+            IKDomReadService kdomReadService, 
             ICollaborationRequestService collaborationRequestService,
             IKDomFollowService kdomFollowService,
-            IKDomFollowRepository kdomFollowRepository
+            IKDomFlowService kdomFlowService
             )
         {
-            _kdomService = kdomService;
-            _repository = repository;
+            _kdomReadService = kdomReadService;
             _collaborationRequestService = collaborationRequestService;
             _kdomFollowService = kdomFollowService;
-            _kdomFollowRepository = kdomFollowRepository;
+            _kdomFlowService = kdomFlowService;
 
         }
 
@@ -44,8 +41,8 @@ namespace KDomBackend.Controllers
 
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-            await _kdomService.CreateKDomAsync(dto, userId);
-            return Ok(new { message = "KDom created successfully." });
+            await _kdomFlowService.CreateKDomAsync(dto, userId);
+            return Ok(new { message = "K-Dom created successfully." });
         }
 
         [Authorize]
@@ -60,12 +57,12 @@ namespace KDomBackend.Controllers
 
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-            var changed = await _kdomService.EditKDomAsync(dto, userId);
+            var changed = await _kdomFlowService.EditKDomAsync(dto, userId);
 
             if (!changed)
                 return NoContent(); // 204: nimic de salvat
 
-            return Ok(new { message = "KDom updated successfully." });
+            return Ok(new { message = "K-Dom updated successfully." });
         }
 
 
@@ -83,7 +80,7 @@ namespace KDomBackend.Controllers
 
             try
             {
-                var changed = await _kdomService.UpdateKDomMetadataAsync(dto, userId);
+                var changed = await _kdomFlowService.UpdateKDomMetadataAsync(dto, userId);
                 if (!changed)
                     return NoContent();
 
@@ -105,7 +102,7 @@ namespace KDomBackend.Controllers
         {
             try
             {
-                var dto = await _kdomService.GetKDomByIdAsync(id);
+                var dto = await _kdomReadService.GetKDomByIdAsync(id);
                 return Ok(dto);
             }
             catch (Exception ex)
@@ -121,7 +118,7 @@ namespace KDomBackend.Controllers
 
             try
             {
-                var edits = await _kdomService.GetEditHistoryAsync(id, userId);
+                var edits = await _kdomReadService.GetEditHistoryAsync(id, userId);
                 return Ok(edits);
             }
             catch (UnauthorizedAccessException)
@@ -142,7 +139,7 @@ namespace KDomBackend.Controllers
 
             try
             {
-                var history = await _kdomService.GetMetadataEditHistoryAsync(id, userId);
+                var history = await _kdomReadService.GetMetadataEditHistoryAsync(id, userId);
                 return Ok(history);
             }
             catch (UnauthorizedAccessException)
@@ -159,7 +156,7 @@ namespace KDomBackend.Controllers
         [HttpGet("pending")]
         public async Task<IActionResult> GetPending()
         {
-            var result = await _kdomService.GetPendingKdomsAsync();
+            var result = await _kdomReadService.GetPendingKdomsAsync();
             return Ok(result);
         }
 
@@ -168,7 +165,7 @@ namespace KDomBackend.Controllers
         public async Task<IActionResult> Approve(string id)
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            await _kdomService.ApproveKdomAsync(id, userId);
+            await _kdomFlowService.ApproveKdomAsync(id, userId);
             return Ok(new { message = "K-Dom approved." });
         }
 
@@ -177,35 +174,35 @@ namespace KDomBackend.Controllers
         public async Task<IActionResult> Reject(string id, [FromBody] KDomRejectDto dto)
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            await _kdomService.RejectKdomAsync(id, dto, userId);
+            await _kdomFlowService.RejectKdomAsync(id, dto, userId);
             return Ok(new { message = "K-Dom rejected." });
         }
+       
         [HttpGet("check")]
         public async Task<IActionResult> CheckTitle([FromQuery] string title)
         {
-            var slug = SlugHelper.GenerateSlug(title); 
-
-            var exists = await _repository.ExistsByTitleOrSlugAsync(title, slug);
-            var suggestions = await _repository.FindSimilarByTitleAsync(title);
+            var exists = await _kdomReadService.ExistsByTitleOrSlugAsync(title);
+            var suggestions = await _kdomReadService.GetSimilarTitlesAsync(title);
 
             return Ok(new
             {
                 exists,
-                suggestions = suggestions.Select(k => k.Title).ToList()
+                suggestions
             });
         }
+
 
         [HttpGet("{id}/children")]
         public async Task<IActionResult> GetChildren(string id)
         {
-            var children = await _kdomService.GetChildrenAsync(id);
+            var children = await _kdomReadService.GetChildrenAsync(id);
             return Ok(children);
         }
 
         [HttpGet("{id}/parent")]
         public async Task<IActionResult> GetParent(string id)
         {
-            var parent = await _kdomService.GetParentAsync(id);
+            var parent = await _kdomReadService.GetParentAsync(id);
             if (parent == null)
                 return NotFound(new { message = "This K-Dom does not have a parent K-Dom." });
 
@@ -215,7 +212,7 @@ namespace KDomBackend.Controllers
         [HttpGet("{id}/related")]
         public async Task<IActionResult> GetRelated(string id)
         {
-            var siblings = await _kdomService.GetSiblingsAsync(id);
+            var siblings = await _kdomReadService.GetSiblingsAsync(id);
             return Ok(siblings);
         }
 
@@ -305,7 +302,7 @@ namespace KDomBackend.Controllers
 
             try
             {
-                var collaborators = await _kdomService.GetCollaboratorsAsync(id, userId);
+                var collaborators = await _kdomReadService.GetCollaboratorsAsync(id, userId);
                 return Ok(collaborators);
             }
             catch (UnauthorizedAccessException)
@@ -325,7 +322,7 @@ namespace KDomBackend.Controllers
 
             try
             {
-                await _kdomService.RemoveCollaboratorAsync(id, userId, userIdToRemove);
+                await _kdomFlowService.RemoveCollaboratorAsync(id, userId, userIdToRemove);
                 return Ok(new { message = "Collaborator removed." });
             }
             catch (UnauthorizedAccessException)
@@ -349,7 +346,7 @@ namespace KDomBackend.Controllers
 
             try
             {
-                await _kdomService.CreateSubKDomAsync(parentId, dto, userId);
+                await _kdomFlowService.CreateSubKDomAsync(parentId, dto, userId);
                 return Ok(new { message = "SubK-Dom created succesfully." });
             }
             catch (UnauthorizedAccessException)
@@ -368,7 +365,7 @@ namespace KDomBackend.Controllers
             if (string.IsNullOrWhiteSpace(query))
                 return BadRequest(new { error = "'query' field is required." });
 
-            var results = await _kdomService.SearchTagOrSlugAsync(query.Trim());
+            var results = await _kdomReadService.SearchTagOrSlugAsync(query.Trim());
             return Ok(results);
         }
 
@@ -427,7 +424,7 @@ namespace KDomBackend.Controllers
         [HttpGet("trending")]
         public async Task<IActionResult> GetTrendingKdoms([FromQuery] int days = 7)
         {
-            var trending = await _kdomService.GetTrendingKdomsAsync(days);
+            var trending = await _kdomReadService.GetTrendingKdomsAsync(days);
             return Ok(trending.OrderByDescending(t => t.TotalScore));
         }
 
@@ -436,15 +433,29 @@ namespace KDomBackend.Controllers
         public async Task<IActionResult> GetSuggestedKdoms()
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var result = await _kdomService.GetSuggestedKdomsAsync(userId);
+            var result = await _kdomReadService.GetSuggestedKdomsAsync(userId);
             return Ok(result);
         }
 
         [HttpGet("{id}/followers/count")]
         public async Task<IActionResult> GetKDomFollowersCount(string id)
         {
-            var count = await _kdomFollowRepository.CountFollowersAsync(id);
+            var count = await _kdomFollowService.GetFollowersCountAsync(id);
             return Ok(new { count });
+        }
+
+        [HttpGet("slug/{slug}")]
+        public async Task<IActionResult> GetBySlug(string slug)
+        {
+            try
+            {
+                var dto = await _kdomReadService.GetKDomBySlugAsync(slug);
+                return Ok(dto);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
         }
 
 

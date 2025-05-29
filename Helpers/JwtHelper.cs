@@ -11,9 +11,10 @@ namespace KDomBackend.Helpers
     {
         private readonly JwtSettings _settings;
 
-        public JwtHelper(IOptions<JwtSettings> settings)
+        public JwtHelper(JwtSettings settings)
         {
-            _settings = settings.Value;
+            _settings = settings;
+            Console.WriteLine($"[DEBUG] JwtHelper - Loaded SecretKey: {_settings.SecretKey}");
         }
 
         public string GenerateToken(User user)

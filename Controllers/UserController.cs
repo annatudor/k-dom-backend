@@ -12,13 +12,15 @@ namespace KDomBackend.Controllers
     [Route("api/users")]
     public class UserController : ControllerBase
     {
-        private readonly IUserService _userService;
-        private readonly IKDomService _kdomService;
+        private readonly IUserProfileService _userProfileService;
+        private readonly IUserAdminService _userAdminService;
+        private readonly IKDomReadService _kdomReadService;
 
-        public UserController(IUserService userService, IKDomService kdomService)
+        public UserController(IUserService userService, IKDomReadService kdomReadService, IUserProfileService userProfileService, IUserAdminService userAdminService )
         {
-            _userService = userService;
-            _kdomService = kdomService;
+            _userProfileService = userProfileService;
+            _userAdminService = userAdminService;
+            _kdomReadService = kdomReadService;
         }
 
         [HttpGet("{id}/profile")]
@@ -26,7 +28,7 @@ namespace KDomBackend.Controllers
         {
             try
             {
-                var profile = await _userService.GetUserProfileAsync(id);
+                var profile = await _userProfileService.GetUserProfileAsync(id);
                 return Ok(profile);
             }
             catch (Exception ex)
@@ -46,7 +48,7 @@ namespace KDomBackend.Controllers
 
             try
             {
-                await _userService.UpdateProfileAsync(userId, dto);
+                await _userProfileService.UpdateProfileAsync(userId, dto);
                 return Ok(new { message = "Profile updated successfully." });
             }
             catch (Exception ex)
@@ -66,7 +68,7 @@ namespace KDomBackend.Controllers
 
             try
             {
-                await _userService.ChangeUserRoleAsync(id, dto.NewRole, adminUserId);
+                await _userAdminService.ChangeUserRoleAsync(id, dto.NewRole, adminUserId);
                 return Ok(new { message = "User's role has been updated." });
             }
             catch (Exception ex)
@@ -79,7 +81,7 @@ namespace KDomBackend.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllUsers([FromQuery] UserFilterDto filter)
         {
-            var result = await _userService.GetAllPaginatedAsync(filter);
+            var result = await _userAdminService.GetAllPaginatedAsync(filter);
             return Ok(result);
         }
 
@@ -93,7 +95,7 @@ namespace KDomBackend.Controllers
         [HttpGet("{id}/kdoms")]
         public async Task<IActionResult> GetKdomsForUser(int id)
         {
-            var result = await _kdomService.GetKdomsForUserAsync(id);
+            var result = await _kdomReadService.GetKdomsForUserAsync(id);
             return Ok(result);
         }
 
@@ -102,7 +104,7 @@ namespace KDomBackend.Controllers
         public async Task<IActionResult> GetRecentlyViewedKdoms()
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var result = await _kdomService.GetRecentlyViewedKdomsAsync(userId);
+            var result = await _kdomReadService.GetRecentlyViewedKdomsAsync(userId);
             return Ok(result);
         }
 

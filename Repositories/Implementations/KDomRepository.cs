@@ -228,6 +228,10 @@ namespace KDomBackend.Repositories.Implementations
             return await _collection.Find(filter).ToListAsync();
         }
 
+        public async Task<KDom?> GetBySlugAsync(string slug)
+        {
+            return await _collection.Find(x => x.Slug == slug).FirstOrDefaultAsync();
+        }
 
     }
 }

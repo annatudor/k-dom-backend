@@ -20,7 +20,19 @@ namespace KDomBackend.Repositories.Implementations
             const string sql = @"
             INSERT INTO audit_log (user_id, action, target_type, target_id, details, created_at)
             VALUES (@UserId, @Action, @TargetType, @TargetId, @Details, @CreatedAt)";
-            await conn.ExecuteAsync(sql, log);
+            
+            var parameters = new
+            {
+                UserId = log.UserId,
+                Action = log.Action.ToString(),      
+                TargetType = log.TargetType.ToString(), 
+                TargetId = log.TargetId,
+                Details = log.Details,
+                CreatedAt = log.CreatedAt
+            };
+
+            await conn.ExecuteAsync(sql, parameters);
+           
         }
         public async Task<List<AuditLog>> GetAllAsync()
         {

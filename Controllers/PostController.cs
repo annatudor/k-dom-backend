@@ -10,11 +10,13 @@ namespace KDomBackend.Controllers
     [Route("api/posts")]
     public class PostController : ControllerBase
     {
-        private readonly IPostService _postService;
+        private readonly IPostReadService _postReadService;
+        private readonly IPostFlowService _postFlowService;
 
-        public PostController(IPostService postService)
+        public PostController(IPostReadService postReadService, IPostFlowService postFlowService )
         {
-            _postService = postService;
+            _postReadService = postReadService;
+            _postFlowService = postFlowService;
         }
 
         [Authorize]
@@ -26,14 +28,14 @@ namespace KDomBackend.Controllers
 
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-            await _postService.CreatePostAsync(dto, userId);
+            await _postFlowService.CreatePostAsync(dto, userId);
             return Ok(new { message = "Post created successfully." });
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var posts = await _postService.GetAllPostsAsync();
+            var posts = await _postReadService.GetAllPostsAsync();
             return Ok(posts);
         }
 
@@ -42,7 +44,7 @@ namespace KDomBackend.Controllers
         {
             try
             {
-                var post = await _postService.GetByIdAsync(id);
+                var post = await _postReadService.GetByIdAsync(id);
                 return Ok(post);
             }
             catch (Exception ex)
@@ -60,7 +62,7 @@ namespace KDomBackend.Controllers
 
             try
             {
-                var result = await _postService.ToggleLikeAsync(id, userId);
+                var result = await _postFlowService.ToggleLikeAsync(id, userId);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -80,7 +82,7 @@ namespace KDomBackend.Controllers
 
             try
             {
-                await _postService.EditPostAsync(id, dto, userId);
+                await _postFlowService.EditPostAsync(id, dto, userId);
                 return Ok(new { message = "Post updated successfully." });
             }
             catch (UnauthorizedAccessException)
@@ -102,7 +104,7 @@ namespace KDomBackend.Controllers
 
             try
             {
-                await _postService.DeletePostAsync(id, userId, isModerator);
+                await _postFlowService.DeletePostAsync(id, userId, isModerator);
                 return Ok(new { message = "Your post has been deleted." });
             }
             catch (UnauthorizedAccessException)
@@ -119,7 +121,7 @@ namespace KDomBackend.Controllers
         [HttpGet("user/{userId}")]
         public async Task<IActionResult> GetByUserId(int userId)
         {
-            var posts = await _postService.GetPostsByUserIdAsync(userId);
+            var posts = await _postReadService.GetPostsByUserIdAsync(userId);
             return Ok(posts);
         }
 
@@ -128,7 +130,7 @@ namespace KDomBackend.Controllers
         public async Task<IActionResult> GetFeed()
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var posts = await _postService.GetFeedAsync(userId);
+            var posts = await _postReadService.GetFeedAsync(userId);
 
             if (!posts.Any())
             {
@@ -147,7 +149,7 @@ namespace KDomBackend.Controllers
         [HttpGet("guest-feed")]
         public async Task<IActionResult> GetGuestFeed([FromQuery] int limit = 30)
         {
-            var posts = await _postService.GetGuestFeedAsync(limit);
+            var posts = await _postReadService.GetGuestFeedAsync(limit);
             return Ok(posts);
         }
 
@@ -157,7 +159,7 @@ namespace KDomBackend.Controllers
             if (string.IsNullOrWhiteSpace(tag))
                 return BadRequest(new { error = "Tag is required." });
 
-            var posts = await _postService.GetPostsByTagAsync(tag.ToLower());
+            var posts = await _postReadService.GetPostsByTagAsync(tag.ToLower());
             return Ok(posts);
         }
 

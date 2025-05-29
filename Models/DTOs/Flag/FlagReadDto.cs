@@ -1,4 +1,5 @@
 ﻿using KDomBackend.Enums;
+using Spryer;
 
 namespace KDomBackend.Models.DTOs.Flag
 {
@@ -6,7 +7,7 @@ namespace KDomBackend.Models.DTOs.Flag
     {
         public int Id { get; set; }
         public int UserId { get; set; }
-        public ContentType ContentType { get; set; }
+        public DbEnum<ContentType> ContentType { get; set; }
         public string ContentId { get; set; } = string.Empty;
         public string Reason { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
