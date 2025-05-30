@@ -1,12 +1,15 @@
 ﻿using KDomBackend.Enums;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson;
+using System.ComponentModel.DataAnnotations;
 
 namespace KDomBackend.Models.DTOs.KDom
 {
     public class KDomMetadataEditReadDto
     {
         public string Id { get; set; } = string.Empty;
+        [Required]
+        public string KDomSlug { get; set; } = string.Empty;
         public string? PreviousParentId { get; set; }
         public string PreviousTitle { get; set; } = string.Empty;
         public string PreviousDescription { get; set; } = string.Empty;

@@ -27,5 +27,11 @@ namespace KDomBackend.Services.Implementations
         {
             return await _userRepository.GetByUsernameAsync(username);
         }
+
+        public async Task<User?> GetUserByIdAsync(int userId)
+        {
+            return await _userRepository.GetByIdAsync(userId);
+        }
+
     }
 }

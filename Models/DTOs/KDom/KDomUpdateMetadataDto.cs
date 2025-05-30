@@ -6,6 +6,7 @@ using MongoDB.Bson;
 public class KDomUpdateMetadataDto
 {
     [Required]
+    public string KDomSlug { get; set; } = string.Empty;
     public string KDomId { get; set; } = string.Empty;
 
     [Required]

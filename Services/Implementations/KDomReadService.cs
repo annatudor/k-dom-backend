@@ -68,6 +68,7 @@ namespace KDomBackend.Services.Implementations
         public async Task<List<KDomEditReadDto>> GetEditHistoryAsync(string kdomId, int userId)
         {
             var kdom = await _kdomRepository.GetByIdAsync(kdomId) ?? throw new Exception("K-Dom not found.");
+
             if (kdom.UserId != userId)
                 throw new UnauthorizedAccessException("You are not the author of this K-Dom.");
 
@@ -78,6 +79,60 @@ namespace KDomBackend.Services.Implementations
                 Id = e.Id,
                 EditNote = e.EditNote ?? "",
                 IsMinor = e.IsMinor,
+                EditedAt = e.EditedAt
+            }).ToList();
+        }
+
+        public async Task<List<KDomEditReadDto>> GetEditHistoryBySlugAsync(string slug, int userId)
+        {
+            var kdom = await _kdomRepository.GetBySlugAsync(slug) ?? throw new Exception("K-Dom not found.");
+
+            // Check permissions - owner, collaborators, or admins can view history
+            if (kdom.UserId != userId &&
+                !kdom.Collaborators.Contains(userId) &&
+                !await IsUserAdminOrModeratorAsync(userId))
+            {
+                throw new UnauthorizedAccessException("You don't have permission to view this K-Dom's edit history.");
+            }
+
+            var edits = await _kdomRepository.GetEditsByKDomIdAsync(kdom.Id); // Use ID internally
+
+            return edits.Select(e => new KDomEditReadDto
+            {
+                Id = e.Id,
+                EditNote = e.EditNote ?? "",
+                IsMinor = e.IsMinor,
+                EditedAt = e.EditedAt
+            }).ToList();
+        }
+
+
+        public async Task<List<KDomMetadataEditReadDto>> GetMetadataEditHistoryBySlugAsync(string slug, int userId)
+        {
+            var kdom = await _kdomRepository.GetBySlugAsync(slug);
+            if (kdom == null)
+                throw new Exception("K-Dom not found.");
+
+            // Check permissions - owner, collaborators, or admins can view metadata history
+            if (kdom.UserId != userId &&
+                !kdom.Collaborators.Contains(userId) &&
+                !await IsUserAdminOrModeratorAsync(userId))
+            {
+                throw new UnauthorizedAccessException("You don't have permission to view this K-Dom's metadata history.");
+            }
+
+            var edits = await _kdomRepository.GetMetadataEditsByKDomIdAsync(kdom.Id); // Use ID internally
+
+            return edits.Select(e => new KDomMetadataEditReadDto
+            {
+                Id = e.Id,
+                PreviousParentId = e.PreviousParentId,
+                PreviousTitle = e.PreviousTitle,
+                PreviousDescription = e.PreviousDescription,
+                PreviousLanguage = e.PreviousLanguage,
+                PreviousHub = e.PreviousHub,
+                PreviousIsForKids = e.PreviousIsForKids,
+                PreviousTheme = e.PreviousTheme,
                 EditedAt = e.EditedAt
             }).ToList();
         }
@@ -397,6 +452,12 @@ namespace KDomBackend.Services.Implementations
                 UpdatedAt = kdom.UpdatedAt,
                 LastEditedAt = kdom.LastEditedtAt
             };
+        }
+
+        private async Task<bool> IsUserAdminOrModeratorAsync(int userId)
+        {
+            var user = await _userService.GetUserByIdAsync(userId);
+            return user?.Role == "admin" || user?.Role == "moderator";
         }
 
     }

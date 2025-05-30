@@ -17,16 +17,18 @@ namespace KDomBackend.Services.Implementations
         private readonly IAuditLogRepository _auditLogRepository;
         private readonly INotificationService _notificationService;
         private readonly IUserRepository _userRepository;
+        private readonly IKDomPermissionService _permissionService; // NEW: Inject permission service
         private readonly KDomValidator _validator;
         private readonly KDomMetadataValidator _metadataValidator;
         private readonly ILogger<KDomFlowService> _logger;
-        
 
-        public KDomFlowService(IKDomRepository kdomRepository,
+        public KDomFlowService(
+            IKDomRepository kdomRepository,
             IUserService userService,
             IAuditLogRepository auditLogRepository,
             INotificationService notificationService,
             IUserRepository userRepository,
+            IKDomPermissionService permissionService, // NEW: Add permission service
             KDomValidator validator,
             KDomMetadataValidator metadataValidator,
             IPostRepository postRepository,
@@ -40,18 +42,17 @@ namespace KDomBackend.Services.Implementations
             _auditLogRepository = auditLogRepository;
             _notificationService = notificationService;
             _userRepository = userRepository;
+            _permissionService = permissionService; // NEW: Assign permission service
             _validator = validator;
             _metadataValidator = metadataValidator;
             _logger = logger;
         }
-
 
         public async Task CreateKDomAsync(KDomCreateDto dto, int userId)
         {
             var sanitizedHtml = HtmlSanitizerHelper.Sanitize(dto.ContentHtml);
             await _validator.CheckDuplicateOrSuggestAsync(dto.Title);
             _logger.LogInformation("DTO primit: {dto}", JsonConvert.SerializeObject(dto));
-
 
             var kdom = new KDom
             {
@@ -64,7 +65,7 @@ namespace KDomBackend.Services.Implementations
                 Theme = dto.Theme,
                 ContentHtml = sanitizedHtml,
                 UserId = userId,
-                ParentId = dto.ParentId, //  nou
+                ParentId = dto.ParentId,
                 CreatedAt = DateTime.UtcNow
             };
             _logger.LogInformation("KDom entity before insert: {kdom}", JsonConvert.SerializeObject(kdom));
@@ -95,8 +96,154 @@ namespace KDomBackend.Services.Implementations
                     TargetId = kdom.Id
                 });
             }
-
         }
+
+        // Existing method (keep for backward compatibility) - assumes KDomSlug contains an ID
+        public async Task<bool> EditKDomAsync(KDomEditDto dto, int userId)
+        {
+            var kdom = await _kdomRepository.GetByIdAsync(dto.KDomSlug);
+            if (kdom == null)
+                throw new Exception("K-Dom not found.");
+
+            return await PerformEditAsync(kdom, dto, userId);
+        }
+
+        // NEW: Slug-based edit method
+        public async Task<bool> EditKDomBySlugAsync(KDomEditDto dto, int userId)
+        {
+            var kdom = await _kdomRepository.GetBySlugAsync(dto.KDomSlug);
+            if (kdom == null)
+                throw new Exception("K-Dom not found.");
+
+            return await PerformEditAsync(kdom, dto, userId);
+        }
+
+        // Existing metadata update method (keep for backward compatibility) - assumes KDomSlug contains an ID
+        public async Task<bool> UpdateKDomMetadataAsync(KDomUpdateMetadataDto dto, int userId)
+        {
+            var kdom = await _kdomRepository.GetByIdAsync(dto.KDomSlug);
+            if (kdom == null)
+                throw new Exception("K-Dom not found.");
+
+            return await PerformMetadataUpdateAsync(kdom, dto, userId);
+        }
+
+        // NEW: Slug-based metadata update
+        public async Task<bool> UpdateKDomMetadataBySlugAsync(KDomUpdateMetadataDto dto, int userId)
+        {
+            var kdom = await _kdomRepository.GetBySlugAsync(dto.KDomSlug);
+            if (kdom == null)
+                throw new Exception("K-Dom not found.");
+
+            return await PerformMetadataUpdateAsync(kdom, dto, userId);
+        }
+
+        // COMMON EDIT LOGIC (now using Permission Service)
+
+        /// <summary>
+        /// Common edit logic extracted to avoid duplication
+        /// </summary>
+        private async Task<bool> PerformEditAsync(KDom kdom, KDomEditDto dto, int userId)
+        {
+            // Check permissions using the permission service
+            await _permissionService.EnsureUserCanEditKDomAsync(kdom, userId);
+
+            var sanitizedHtml = HtmlSanitizerHelper.Sanitize(dto.ContentHtml);
+
+            // Don't save if content is identical
+            if (sanitizedHtml == kdom.ContentHtml)
+                return false; // nothing to save
+
+            var edit = new KDomEdit
+            {
+                KDomId = kdom.Id, // Always use the actual K-Dom ID for internal operations
+                UserId = userId,
+                PreviousContentHtml = kdom.ContentHtml,
+                NewContentHtml = sanitizedHtml,
+                EditNote = dto.EditNote,
+                IsMinor = dto.IsMinor,
+                IsAutoSave = dto.IsAutoSave,
+                EditedAt = DateTime.UtcNow
+            };
+
+            // Only create audit log for manual saves
+            if (!dto.IsAutoSave)
+            {
+                await _auditLogRepository.CreateAsync(new AuditLog
+                {
+                    UserId = userId,
+                    Action = AuditAction.EditKDom,
+                    TargetType = AuditTargetType.KDom,
+                    TargetId = kdom.Id,
+                    CreatedAt = DateTime.UtcNow,
+                    Details = dto.EditNote ?? ""
+                });
+            }
+
+            await _kdomRepository.SaveEditAsync(edit);
+            await _kdomRepository.UpdateContentAsync(kdom.Id, sanitizedHtml);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Common metadata update logic (now using Permission Service)
+        /// </summary>
+        private async Task<bool> PerformMetadataUpdateAsync(KDom kdom, KDomUpdateMetadataDto dto, int userId)
+        {
+            // Check permissions using the permission service
+            await _permissionService.EnsureUserCanEditKDomAsync(kdom, userId, "update metadata for");
+
+            await _metadataValidator.ValidateParentAsync(kdom.Id, dto.ParentId);
+
+            // Check if anything actually changed
+            if (kdom.Title == dto.Title &&
+                kdom.Description == dto.Description &&
+                kdom.Language == dto.Language &&
+                kdom.Hub == dto.Hub &&
+                kdom.IsForKids == dto.IsForKids &&
+                kdom.Theme == dto.Theme &&
+                kdom.ParentId == dto.ParentId)
+            {
+                return false; // No changes
+            }
+
+            var metadataEdit = new KDomMetadataEdit
+            {
+                PreviousParentId = kdom.ParentId,
+                KDomId = kdom.Id,
+                UserId = userId,
+                PreviousTitle = kdom.Title,
+                PreviousDescription = kdom.Description,
+                PreviousLanguage = kdom.Language,
+                PreviousHub = kdom.Hub,
+                PreviousIsForKids = kdom.IsForKids,
+                PreviousTheme = kdom.Theme,
+                EditedAt = DateTime.UtcNow
+            };
+
+            await _kdomRepository.SaveMetadataEditAsync(metadataEdit);
+
+            // Update the DTO to use the correct ID for the repository method
+            var updateDto = new KDomUpdateMetadataDto
+            {
+                KDomSlug = kdom.Id, // Use ID for the repository call
+                Title = dto.Title,
+                ParentId = dto.ParentId,
+                Description = dto.Description,
+                Hub = dto.Hub,
+                Language = dto.Language,
+                IsForKids = dto.IsForKids,
+                Theme = dto.Theme,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _kdomRepository.UpdateMetadataAsync(updateDto);
+
+            return true;
+        }
+
+        // OTHER EXISTING METHODS (now using Permission Service)
 
         public async Task CreateSubKDomAsync(string parentId, KDomSubCreateDto dto, int userId)
         {
@@ -104,8 +251,8 @@ namespace KDomBackend.Services.Implementations
             if (parent == null)
                 throw new Exception("Parent not found.");
 
-            if (parent.UserId != userId && !parent.Collaborators.Contains(userId))
-                throw new UnauthorizedAccessException("You do not have permission to create a page.");
+            // Use permission service
+            await _permissionService.EnsureUserCanEditKDomAsync(parent, userId, "create a sub-page for");
 
             var slug = SlugHelper.GenerateSlug(dto.Title);
             var exists = await _kdomRepository.ExistsByTitleOrSlugAsync(dto.Title, slug);
@@ -158,91 +305,6 @@ namespace KDomBackend.Services.Implementations
             }
         }
 
-        public async Task<bool> EditKDomAsync(KDomEditDto dto, int userId)
-        {
-            var kdom = await _kdomRepository.GetByIdAsync(dto.KDomId);
-            if (kdom == null)
-                throw new Exception("K-Dom not found.");
-
-            var sanitizedHtml = HtmlSanitizerHelper.Sanitize(dto.ContentHtml);
-
-            // nu salva daca e identic
-            if (sanitizedHtml == kdom.ContentHtml)
-                return false; // nimic de salvat
-
-            var edit = new KDomEdit
-            {
-                KDomId = dto.KDomId,
-                UserId = userId,
-                PreviousContentHtml = kdom.ContentHtml,
-                NewContentHtml = sanitizedHtml,
-                EditNote = dto.EditNote,
-                IsMinor = dto.IsMinor,
-                IsAutoSave = dto.IsAutoSave,
-                EditedAt = DateTime.UtcNow
-            };
-
-            if (!dto.IsAutoSave)
-            {
-                await _auditLogRepository.CreateAsync(new AuditLog
-                {
-                    UserId = userId,
-                    Action = AuditAction.EditKDom,
-                    TargetType = AuditTargetType.KDom,
-                    TargetId = dto.KDomId,
-                    CreatedAt = DateTime.UtcNow,
-                    Details = dto.EditNote ?? ""
-                });
-            }
-
-            await _kdomRepository.SaveEditAsync(edit);
-            await _kdomRepository.UpdateContentAsync(dto.KDomId, sanitizedHtml);
-
-            return true;
-        }
-
-        public async Task<bool> UpdateKDomMetadataAsync(KDomUpdateMetadataDto dto, int userId)
-        {
-            var kdom = await _kdomRepository.GetByIdAsync(dto.KDomId);
-            if (kdom == null)
-                throw new Exception("K-Dom not found.");
-
-            if (kdom.UserId != userId)
-                throw new UnauthorizedAccessException("You are not the author of this K-Dom.");
-
-            await _metadataValidator.ValidateParentAsync(dto.KDomId, dto.ParentId);
-
-            if (kdom.Title == dto.Title &&
-                kdom.Description == dto.Description &&
-                kdom.Language == dto.Language &&
-                kdom.Hub == dto.Hub &&
-                kdom.IsForKids == dto.IsForKids &&
-                kdom.Theme == dto.Theme)
-            {
-                return false;
-            }
-
-
-            var metadataEdit = new KDomMetadataEdit
-            {
-                PreviousParentId = kdom.ParentId,
-                KDomId = kdom.Id,
-                UserId = userId,
-                PreviousTitle = kdom.Title,
-                PreviousDescription = kdom.Description,
-                PreviousLanguage = kdom.Language,
-                PreviousHub = kdom.Hub,
-                PreviousIsForKids = kdom.IsForKids,
-                PreviousTheme = kdom.Theme,
-                EditedAt = DateTime.UtcNow
-            };
-
-            await _kdomRepository.SaveMetadataEditAsync(metadataEdit);
-            await _kdomRepository.UpdateMetadataAsync(dto);
-
-            return true;
-        }
-
         public async Task ApproveKdomAsync(string kdomId, int moderatorId)
         {
             await _kdomRepository.ApproveAsync(kdomId);
@@ -283,6 +345,7 @@ namespace KDomBackend.Services.Implementations
                 CreatedAt = DateTime.UtcNow,
                 Details = dto.Reason
             });
+
             var kdom = await _kdomRepository.GetByIdAsync(kdomId);
             if (kdom == null) throw new Exception("K-Dom not found.");
 
@@ -295,7 +358,6 @@ namespace KDomBackend.Services.Implementations
                 TargetType = ContentType.KDom,
                 TargetId = kdomId
             });
-
         }
 
         public async Task RemoveCollaboratorAsync(string kdomId, int requesterId, int userIdToRemove)
@@ -304,8 +366,8 @@ namespace KDomBackend.Services.Implementations
             if (kdom == null)
                 throw new Exception("K-Dom not found.");
 
-            if (kdom.UserId != requesterId)
-                throw new UnauthorizedAccessException("Only the owner can remove collaborators.");
+            // Use permission service to check if user is owner
+            _permissionService.EnsureUserIsOwner(kdom, requesterId, "remove collaborators from");
 
             if (!kdom.Collaborators.Contains(userIdToRemove))
                 throw new Exception("User is not a collaborator.");
@@ -332,9 +394,6 @@ namespace KDomBackend.Services.Implementations
                 TargetType = ContentType.KDom,
                 TargetId = kdomId
             });
-
         }
-
-
     }
 }

@@ -9,6 +9,7 @@ namespace KDomBackend.Services.Interfaces
        
         Task<string> GetUsernameByUserIdAsync(int userId);
         Task<User?> GetUserByUsernameAsync(string username);
+        Task<User?> GetUserByIdAsync(int userId);
 
     }
 }
