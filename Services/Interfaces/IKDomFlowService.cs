@@ -14,8 +14,8 @@ namespace KDomBackend.Services.Interfaces
         Task RejectKdomAsync(string kdomId, KDomRejectDto dto, int moderatorId);
         Task RemoveCollaboratorAsync(string kdomId, int requesterId, int userIdToRemove);
 
-       
-        Task<bool> UpdateKDomMetadataAsync(KDomUpdateMetadataDto dto, int userId);
-        Task<bool> UpdateKDomMetadataBySlugAsync(KDomUpdateMetadataDto dto, int userId);
+
+        Task<bool> UpdateKDomMetadataByIdAsync(string kdomId, KDomUpdateMetadataDto dto, int userId);
+        Task<bool> UpdateKDomMetadataBySlugAsync(string slug, KDomUpdateMetadataDto dto, int userId);
     }
 }

@@ -23,5 +23,7 @@ namespace KDomBackend.Models.DTOs.KDom
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public DateTime? LastEditedAt { get;  set; }
+        public string? ParentId { get; set; }
+
     }
 }

@@ -119,25 +119,26 @@ namespace KDomBackend.Services.Implementations
         }
 
         // Existing metadata update method (keep for backward compatibility) - assumes KDomSlug contains an ID
-        public async Task<bool> UpdateKDomMetadataAsync(KDomUpdateMetadataDto dto, int userId)
+        public async Task<bool> UpdateKDomMetadataByIdAsync(string kdomId, KDomUpdateMetadataDto dto, int userId)
         {
-            var kdom = await _kdomRepository.GetByIdAsync(dto.KDomSlug);
+            var kdom = await _kdomRepository.GetByIdAsync(kdomId);
             if (kdom == null)
                 throw new Exception("K-Dom not found.");
 
             return await PerformMetadataUpdateAsync(kdom, dto, userId);
         }
-
         // NEW: Slug-based metadata update
-        public async Task<bool> UpdateKDomMetadataBySlugAsync(KDomUpdateMetadataDto dto, int userId)
+        public async Task<bool> UpdateKDomMetadataBySlugAsync(string slug, KDomUpdateMetadataDto dto, int userId)
         {
-            var kdom = await _kdomRepository.GetBySlugAsync(dto.KDomSlug);
+            var kdom = await _kdomRepository.GetBySlugAsync(slug);
             if (kdom == null)
                 throw new Exception("K-Dom not found.");
 
             return await PerformMetadataUpdateAsync(kdom, dto, userId);
         }
 
+      
+     
         // COMMON EDIT LOGIC (now using Permission Service)
 
         /// <summary>
@@ -194,7 +195,14 @@ namespace KDomBackend.Services.Implementations
             // Check permissions using the permission service
             await _permissionService.EnsureUserCanEditKDomAsync(kdom, userId, "update metadata for");
 
-            await _metadataValidator.ValidateParentAsync(kdom.Id, dto.ParentId);
+            // Procesează parentId - convertește string gol în null
+            string? actualParentId = string.IsNullOrWhiteSpace(dto.ParentId) ? null : dto.ParentId;
+
+            // Validează parentId doar dacă nu este null/empty
+            if (!string.IsNullOrEmpty(actualParentId))
+            {
+                await _metadataValidator.ValidateParentAsync(kdom.Id, actualParentId);
+            }
 
             // Check if anything actually changed
             if (kdom.Title == dto.Title &&
@@ -203,7 +211,7 @@ namespace KDomBackend.Services.Implementations
                 kdom.Hub == dto.Hub &&
                 kdom.IsForKids == dto.IsForKids &&
                 kdom.Theme == dto.Theme &&
-                kdom.ParentId == dto.ParentId)
+                kdom.ParentId == actualParentId) // Folosește actualParentId
             {
                 return false; // No changes
             }
@@ -229,13 +237,12 @@ namespace KDomBackend.Services.Implementations
             {
                 KDomSlug = kdom.Id, // Use ID for the repository call
                 Title = dto.Title,
-                ParentId = dto.ParentId,
+                ParentId = actualParentId, // Folosește actualParentId
                 Description = dto.Description,
                 Hub = dto.Hub,
                 Language = dto.Language,
                 IsForKids = dto.IsForKids,
-                Theme = dto.Theme,
-                UpdatedAt = DateTime.UtcNow
+                Theme = dto.Theme
             };
 
             await _kdomRepository.UpdateMetadataAsync(updateDto);

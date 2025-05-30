@@ -130,14 +130,12 @@ namespace KDomBackend.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            if (dto.KDomSlug != slug)
-                return BadRequest("Slug mismatch.");
-
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
             try
             {
-                var changed = await _kdomFlowService.UpdateKDomMetadataBySlugAsync(dto, userId);
+                // NU mai verificăm slug mismatch - slug-ul vine din URL, nu din body
+                var changed = await _kdomFlowService.UpdateKDomMetadataBySlugAsync(slug, dto, userId);
                 if (!changed)
                     return NoContent();
 
@@ -154,21 +152,18 @@ namespace KDomBackend.Controllers
         }
 
         // ID-BASED METADATA UPDATE (Backward compatibility)
-        [Authorize]
         [HttpPut("{id}/metadata")]
         public async Task<IActionResult> UpdateMetadataById(string id, [FromBody] KDomUpdateMetadataDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            if (dto.KDomSlug != id)
-                return BadRequest("ID mismatch.");
-
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
             try
             {
-                var changed = await _kdomFlowService.UpdateKDomMetadataAsync(dto, userId);
+                // NU mai verificăm ID mismatch - ID-ul vine din URL, nu din body
+                var changed = await _kdomFlowService.UpdateKDomMetadataByIdAsync(id, dto, userId);
                 if (!changed)
                     return NoContent();
 

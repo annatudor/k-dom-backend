@@ -43,20 +43,38 @@ namespace KDomBackend.Repositories.Implementations
         {
             await _context.KDomEdits.InsertOneAsync(edit);
         }
+
         public async Task UpdateMetadataAsync(KDomUpdateMetadataDto dto)
         {
             var update = Builders<KDom>.Update
-                .Set(x => x.ParentId, dto.ParentId)
                 .Set(x => x.Title, dto.Title)
                 .Set(x => x.Description, dto.Description)
                 .Set(x => x.Hub, dto.Hub)
                 .Set(x => x.Language, dto.Language)
                 .Set(x => x.IsForKids, dto.IsForKids)
                 .Set(x => x.Theme, dto.Theme)
-                .Set(x => x.UpdatedAt, DateTime.UtcNow); 
+                .Set(x => x.UpdatedAt, DateTime.UtcNow);
+
+            // Gestionează ParentId - poate fi null, string gol sau ObjectId valid
+            if (dto.ParentId == null || string.IsNullOrWhiteSpace(dto.ParentId))
+            {
+                update = update.Set(x => x.ParentId, null);
+            }
+            else
+            {
+                // Verifică că parentId este un ObjectId valid
+                if (ObjectId.TryParse(dto.ParentId, out _))
+                {
+                    update = update.Set(x => x.ParentId, dto.ParentId);
+                }
+                else
+                {
+                    throw new ArgumentException($"Invalid ParentId format: {dto.ParentId}");
+                }
+            }
 
             await _collection.UpdateOneAsync(
-                x => x.Id == dto.KDomId,
+                x => x.Id == dto.KDomSlug, // Folosește KDomSlug care conține ID-ul
                 update
             );
         }
