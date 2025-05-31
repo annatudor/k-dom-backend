@@ -16,6 +16,8 @@ namespace KDomBackend.Services.Implementations
         private readonly IAuditLogRepository _auditLogRepository;
         private readonly INotificationService _notificationService;
         private readonly KDomTagHelper _tagHelper;
+        private readonly IKDomRepository _kdomRepository;
+
 
 
         public PostFlowService(IPostRepository repository,
@@ -33,36 +35,62 @@ namespace KDomBackend.Services.Implementations
             _auditLogRepository = auditLogRepository;
             _notificationService = notificationService;
             _tagHelper = tagHelper;
+            _kdomRepository = kdomRepository;
         }
 
         public async Task CreatePostAsync(PostCreateDto dto, int userId)
         {
             var cleanHtml = HtmlSanitizerHelper.Sanitize(dto.ContentHtml);
-            var tags = await _tagHelper.GetTagsFromKDomIdAsync(dto.KDomId);
 
+            // FIXED: Process tags correctly
+            List<string> tags = new List<string>();
+
+            // If KDomId is provided, get tags from that K-Dom
+            if (!string.IsNullOrEmpty(dto.KDomId))
+            {
+                var kdomTags = await _tagHelper.GetTagsFromKDomIdAsync(dto.KDomId);
+                tags.AddRange(kdomTags);
+            }
+
+            // If additional tags are provided from frontend, validate and add them
+            if (dto.Tags != null && dto.Tags.Any())
+            {
+                foreach (var tagSlug in dto.Tags)
+                {
+                    if (!string.IsNullOrWhiteSpace(tagSlug))
+                    {
+                        // Verify that the tag corresponds to an actual K-Dom
+                        var kdom = await _kdomRepository.GetBySlugAsync(tagSlug);
+                        if (kdom != null && !tags.Contains(tagSlug))
+                        {
+                            tags.Add(tagSlug);
+                        }
+                    }
+                }
+            }
 
             var post = new Post
             {
                 UserId = userId,
                 ContentHtml = cleanHtml,
-                Tags = tags,
+                Tags = tags, // Now properly populated
                 CreatedAt = DateTime.UtcNow
             };
 
             await _repository.CreateAsync(post);
+
+            // Handle mentions if content contains @
             if (dto.ContentHtml.Contains("@"))
             {
                 await MentionHelper.HandleMentionsAsync(
-                dto.ContentHtml,
-                userId,
-                post.Id,
-                ContentType.Post,
-                NotificationType.MentionInPost,
-                _userService,
-                _notificationService);
+                    dto.ContentHtml,
+                    userId,
+                    post.Id,
+                    ContentType.Post,
+                    NotificationType.MentionInPost,
+                    _userService,
+                    _notificationService);
             }
-
-
         }
         public async Task<PostLikeResponseDto> ToggleLikeAsync(string postId, int userId)
         {

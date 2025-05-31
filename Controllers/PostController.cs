@@ -13,7 +13,7 @@ namespace KDomBackend.Controllers
         private readonly IPostReadService _postReadService;
         private readonly IPostFlowService _postFlowService;
 
-        public PostController(IPostReadService postReadService, IPostFlowService postFlowService )
+        public PostController(IPostReadService postReadService, IPostFlowService postFlowService)
         {
             _postReadService = postReadService;
             _postFlowService = postFlowService;
@@ -53,15 +53,14 @@ namespace KDomBackend.Controllers
             }
         }
 
-
+        // FIXED: Changed from PUT to POST and fixed route
         [Authorize]
-        [HttpPut("{id}/like")]
+        [HttpPost("{id}/like")]
         public async Task<IActionResult> ToggleLike(string id)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
             try
             {
+                var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
                 var result = await _postFlowService.ToggleLikeAsync(id, userId);
                 return Ok(result);
             }
@@ -117,7 +116,6 @@ namespace KDomBackend.Controllers
             }
         }
 
-
         [HttpGet("user/{userId}")]
         public async Task<IActionResult> GetByUserId(int userId)
         {
@@ -136,14 +134,13 @@ namespace KDomBackend.Controllers
             {
                 return Ok(new
                 {
-                    message = "You’re not following anyone yet. Follow users or K-Doms to see personalized posts here.",
+                    message = "You're not following anyone yet. Follow users or K-Doms to see personalized posts here.",
                     posts = new List<PostReadDto>()
                 });
             }
 
             return Ok(posts);
         }
-
 
         [AllowAnonymous]
         [HttpGet("guest-feed")]
@@ -162,7 +159,5 @@ namespace KDomBackend.Controllers
             var posts = await _postReadService.GetPostsByTagAsync(tag.ToLower());
             return Ok(posts);
         }
-
-
     }
 }
