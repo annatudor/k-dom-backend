@@ -21,5 +21,24 @@ namespace KDomBackend.Repositories.Interfaces
         Task<List<User>> SearchUsersAsync(string query);
 
 
+        // Statistici pentru activitate și contribuții
+        Task<int> GetUserKDomsCreatedCountAsync(int userId);
+        Task<int> GetUserKDomsCollaboratedCountAsync(int userId);
+        Task<int> GetUserPostsCountAsync(int userId);
+        Task<int> GetUserCommentsCountAsync(int userId);
+        Task<DateTime?> GetUserLastActivityAsync(int userId);
+
+        // Statistici detaliate pentru admin
+        Task<int> GetUserTotalLikesReceivedAsync(int userId);
+        Task<int> GetUserTotalLikesGivenAsync(int userId);
+        Task<int> GetUserCommentsReceivedAsync(int userId);
+        Task<int> GetUserFlagsReceivedAsync(int userId);
+        Task<Dictionary<string, int>> GetUserActivityByMonthAsync(int userId, int months = 12);
+        Task<List<string>> GetUserRecentActionsAsync(int userId, int limit = 10);
+
+        Task UpdateLastLoginAsync(int userId);
+        Task<DateTime?> GetLastLoginAsync(int userId);
+
+
     }
 }

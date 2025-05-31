@@ -17,6 +17,14 @@ namespace KDomBackend.Repositories.Interfaces
         Task<Dictionary<string, int>> GetRecentTagCountsAsync(int days = 7);
         Task<List<Post>> GetRecentPostsByUserAsync(int userId, int limit = 30);
 
+        Task<int> GetPostCountByUserAsync(int userId);
+        Task<int> GetTotalLikesReceivedByUserPostsAsync(int userId);
+        Task<int> GetTotalLikesGivenByUserAsync(int userId);
+        Task<List<Post>> GetPostsByUserAsync(int userId, int limit = 50);
+        Task<Dictionary<string, int>> GetUserPostsByMonthAsync(int userId, int months = 12);
+        Task<int> GetUserPostViewsAsync(int userId); // Pentru viitor când implementăm views
+        Task<List<string>> GetUserPostIdsAsync(int userId); // Pentru a obține comment count
+
 
     }
 }

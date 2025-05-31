@@ -215,6 +215,132 @@ namespace KDomBackend.Repositories.Implementations
             return (await conn.QueryAsync<User>(sql, new { Query = query })).ToList();
         }
 
+        public async Task<int> GetUserKDomsCreatedCountAsync(int userId)
+        {
+            using var conn = _context.CreateConnection();
+            // Presupunem că avem o coloană user_id în tabela kdoms sau folosim MongoDB
+            // Pentru MongoDB, va trebui să apelăm IKDomRepository
+            // Pentru acum, returnăm 0 și implementăm în service prin IKDomRepository
+            return 0; // Implementare în service
+        }
+
+        public async Task<int> GetUserKDomsCollaboratedCountAsync(int userId)
+        {
+            // Similar, implementare în service prin IKDomRepository
+            return 0;
+        }
+
+        public async Task<int> GetUserPostsCountAsync(int userId)
+        {
+            // Similar, implementare în service prin IPostRepository
+            return 0;
+        }
+
+        public async Task<int> GetUserCommentsCountAsync(int userId)
+        {
+            // Similar, implementare în service prin ICommentRepository
+            return 0;
+        }
+
+        public async Task<DateTime?> GetUserLastActivityAsync(int userId)
+        {
+            using var conn = _context.CreateConnection();
+            const string sql = @"
+                SELECT MAX(created_at) 
+                FROM audit_log 
+                WHERE user_id = @UserId 
+                AND action IN ('CreateKDom', 'EditKDom', 'CreatePost', 'CreateComment')";
+
+            return await conn.QueryFirstOrDefaultAsync<DateTime?>(sql, new { UserId = userId });
+        }
+
+        public async Task<int> GetUserTotalLikesReceivedAsync(int userId)
+        {
+            // Implementare prin aggregare din MongoDB (posts + comments)
+            return 0; // Implementare în service
+        }
+
+        public async Task<int> GetUserTotalLikesGivenAsync(int userId)
+        {
+            // Implementare prin aggregare din MongoDB
+            return 0; // Implementare în service
+        }
+
+        public async Task<int> GetUserCommentsReceivedAsync(int userId)
+        {
+            // Implementare prin ICommentRepository
+            return 0; // Implementare în service
+        }
+
+        public async Task<int> GetUserFlagsReceivedAsync(int userId)
+        {
+            using var conn = _context.CreateConnection();
+            const string sql = @"
+                SELECT COUNT(*) 
+                FROM flags f
+                JOIN posts p ON f.content_id = p.id AND f.content_type = 'Post'
+                WHERE p.user_id = @UserId
+                UNION ALL
+                SELECT COUNT(*) 
+                FROM flags f
+                JOIN comments c ON f.content_id = c.id AND f.content_type = 'Comment'
+                WHERE c.user_id = @UserId";
+
+            var results = await conn.QueryAsync<int>(sql, new { UserId = userId });
+            return results.Sum();
+        }
+
+        public async Task<Dictionary<string, int>> GetUserActivityByMonthAsync(int userId, int months = 12)
+        {
+            using var conn = _context.CreateConnection();
+            var fromDate = DateTime.UtcNow.AddMonths(-months);
+
+            const string sql = @"
+                SELECT 
+                    DATE_FORMAT(created_at, '%Y-%m') as month,
+                    COUNT(*) as count
+                FROM audit_log 
+                WHERE user_id = @UserId 
+                AND created_at >= @FromDate
+                AND action IN ('CreateKDom', 'EditKDom', 'CreatePost', 'CreateComment')
+                GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+                ORDER BY month";
+
+            var results = await conn.QueryAsync<dynamic>(sql, new { UserId = userId, FromDate = fromDate });
+
+            return results.ToDictionary(
+                r => (string)r.month,
+                r => (int)r.count
+            );
+        }
+
+        public async Task<List<string>> GetUserRecentActionsAsync(int userId, int limit = 10)
+        {
+            using var conn = _context.CreateConnection();
+            const string sql = @"
+                SELECT CONCAT(action, ' - ', details, ' (', created_at, ')') as action_description
+                FROM audit_log 
+                WHERE user_id = @UserId 
+                ORDER BY created_at DESC 
+                LIMIT @Limit";
+
+            var results = await conn.QueryAsync<string>(sql, new { UserId = userId, Limit = limit });
+            return results.ToList();
+        }
+
+        public async Task UpdateLastLoginAsync(int userId)
+        {
+            using var conn = _context.CreateConnection();
+            const string sql = "UPDATE users SET last_login_at = @LoginTime WHERE id = @UserId";
+            await conn.ExecuteAsync(sql, new { LoginTime = DateTime.UtcNow, UserId = userId });
+        }
+
+        public async Task<DateTime?> GetLastLoginAsync(int userId)
+        {
+            using var conn = _context.CreateConnection();
+            const string sql = "SELECT last_login_at FROM users WHERE id = @UserId";
+            return await conn.QueryFirstOrDefaultAsync<DateTime?>(sql, new { UserId = userId });
+        }
 
     }
 }

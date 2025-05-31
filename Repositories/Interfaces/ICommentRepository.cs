@@ -16,5 +16,14 @@ namespace KDomBackend.Repositories.Interfaces
         Task<List<string>> GetCommentedKDomIdsByUserAsync(int userId, int days = 30);
 
 
+        Task<int> GetCommentCountByUserAsync(int userId);
+        Task<int> GetCommentsReceivedByUserAsync(int userId); // Comentarii primite pe posturile user-ului
+        Task<List<Comment>> GetCommentsByUserAsync(int userId, int limit = 50);
+        Task<int> GetTotalLikesReceivedByUserCommentsAsync(int userId);
+        Task<int> GetTotalLikesGivenByUserAsync(int userId);
+
+        Task<List<Comment>> GetCommentsOnUserKDomsAsync(List<string> kdomIds, int limit = 100);
+        Task<Dictionary<string, int>> GetUserCommentsByMonthAsync(int userId, int months = 12);
+        Task<Dictionary<int, int>> GetTopCommentersOnUserContentAsync(int userId, List<string> userContentIds, int limit = 10);
     }
 }

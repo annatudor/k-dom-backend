@@ -26,7 +26,7 @@ namespace KDomBackend.Controllers
         /// <summary>
         /// Obține profilul utilizatorului curent (din JWT token)
         /// </summary>
-        [HttpGet]
+        [HttpGet("my-profile")]
         public async Task<IActionResult> GetMyProfile()
         {
             try
@@ -44,7 +44,7 @@ namespace KDomBackend.Controllers
         /// <summary>
         /// Actualizează profilul utilizatorului curent
         /// </summary>
-        [HttpPut]
+        [HttpPut("edit-profile")]
         public async Task<IActionResult> UpdateMyProfile([FromBody] UserProfileUpdateDto dto)
         {
             if (!ModelState.IsValid)
@@ -101,6 +101,21 @@ namespace KDomBackend.Controllers
                 var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
                 var result = await _kdomReadService.GetKdomsForUserAsync(userId);
                 return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("private")]
+        public async Task<IActionResult> GetMyPrivateInfo()
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                var privateInfo = await _userProfileService.GetUserPrivateInfoAsync(userId, userId);
+                return Ok(privateInfo);
             }
             catch (Exception ex)
             {

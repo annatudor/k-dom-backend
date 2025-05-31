@@ -251,5 +251,193 @@ namespace KDomBackend.Repositories.Implementations
             return await _collection.Find(x => x.Slug == slug).FirstOrDefaultAsync();
         }
 
+
+        /// <summary>
+        /// Obține numărul de K-Dom-uri create de un utilizator
+        /// </summary>
+        public async Task<int> GetCreatedKDomsCountByUserAsync(int userId)
+        {
+            var filter = Builders<KDom>.Filter.Eq(k => k.UserId, userId);
+            return (int)await _collection.CountDocumentsAsync(filter);
+        }
+
+        /// <summary>
+        /// Obține numărul de K-Dom-uri unde utilizatorul colaborează
+        /// </summary>
+        public async Task<int> GetCollaboratedKDomsCountByUserAsync(int userId)
+        {
+            var filter = Builders<KDom>.Filter.And(
+                Builders<KDom>.Filter.Ne(k => k.UserId, userId),
+                Builders<KDom>.Filter.AnyEq(k => k.Collaborators, userId)
+            );
+            return (int)await _collection.CountDocumentsAsync(filter);
+        }
+
+        /// <summary>
+        /// Obține K-Dom-urile unui utilizator (create + colaborate)
+        /// </summary>
+        public async Task<List<KDom>> GetKDomsByUserAsync(int userId, bool includeCollaborated = true)
+        {
+            FilterDefinition<KDom> filter;
+
+            if (includeCollaborated)
+            {
+                filter = Builders<KDom>.Filter.Or(
+                    Builders<KDom>.Filter.Eq(k => k.UserId, userId),
+                    Builders<KDom>.Filter.AnyEq(k => k.Collaborators, userId)
+                );
+            }
+            else
+            {
+                filter = Builders<KDom>.Filter.Eq(k => k.UserId, userId);
+            }
+
+            return await _collection
+                .Find(filter)
+                .SortByDescending(k => k.CreatedAt)
+                .ToListAsync();
+        }
+
+        /// <summary>
+        /// Obține ID-urile K-Dom-urilor unui utilizator
+        /// </summary>
+        public async Task<List<string>> GetUserKDomIdsAsync(int userId, bool includeCollaborated = true)
+        {
+            FilterDefinition<KDom> filter;
+
+            if (includeCollaborated)
+            {
+                filter = Builders<KDom>.Filter.Or(
+                    Builders<KDom>.Filter.Eq(k => k.UserId, userId),
+                    Builders<KDom>.Filter.AnyEq(k => k.Collaborators, userId)
+                );
+            }
+            else
+            {
+                filter = Builders<KDom>.Filter.Eq(k => k.UserId, userId);
+            }
+
+            var projection = Builders<KDom>.Projection.Include(k => k.Id);
+            var cursor = await _collection.Find(filter).Project(projection).ToCursorAsync();
+            var results = await cursor.ToListAsync();
+
+            return results.Select(doc => doc["_id"].AsString).ToList();
+        }
+
+        /// <summary>
+        /// Obține numărul de editări făcute de un utilizator pe K-Dom-uri
+        /// </summary>
+        public async Task<int> GetUserKDomEditsCountAsync(int userId)
+        {
+            // Folosește KDomEditRepository prin MongoDB context
+            var filter = Builders<KDomEdit>.Filter.Eq(e => e.UserId, userId);
+            return (int)await _context.KDomEdits.CountDocumentsAsync(filter);
+        }
+
+        /// <summary>
+        /// Obține distribuția K-Dom-urilor pe hub-uri pentru un utilizator
+        /// </summary>
+        public async Task<Dictionary<string, int>> GetUserKDomsByHubAsync(int userId)
+        {
+            var pipeline = new[]
+            {
+                new BsonDocument("$match", new BsonDocument("$or", new BsonArray
+                {
+                    new BsonDocument("userId", userId),
+                    new BsonDocument("collaborators", userId)
+                })),
+                new BsonDocument("$group", new BsonDocument
+                {
+                    { "_id", "$hub" },
+                    { "count", new BsonDocument("$sum", 1) }
+                }),
+                new BsonDocument("$sort", new BsonDocument("count", -1))
+            };
+
+            var cursor = await _collection.AggregateAsync<BsonDocument>(pipeline);
+            var results = await cursor.ToListAsync();
+
+            return results.ToDictionary(
+                doc => doc["_id"].AsString,
+                doc => doc["count"].AsInt32
+            );
+        }
+
+        /// <summary>
+        /// Obține distribuția K-Dom-urilor pe limbi pentru un utilizator
+        /// </summary>
+        public async Task<Dictionary<string, int>> GetUserKDomsByLanguageAsync(int userId)
+        {
+            var pipeline = new[]
+            {
+                new BsonDocument("$match", new BsonDocument("$or", new BsonArray
+                {
+                    new BsonDocument("userId", userId),
+                    new BsonDocument("collaborators", userId)
+                })),
+                new BsonDocument("$group", new BsonDocument
+                {
+                    { "_id", "$language" },
+                    { "count", new BsonDocument("$sum", 1) }
+                }),
+                new BsonDocument("$sort", new BsonDocument("count", -1))
+            };
+
+            var cursor = await _collection.AggregateAsync<BsonDocument>(pipeline);
+            var results = await cursor.ToListAsync();
+
+            return results.ToDictionary(
+                doc => doc["_id"].AsString,
+                doc => doc["count"].AsInt32
+            );
+        }
+
+        /// <summary>
+        /// Placeholder pentru views (când implementăm tracking-ul)
+        /// </summary>
+        public async Task<int> GetUserKDomViewsAsync(int userId)
+        {
+            // Pentru viitor - când implementăm view tracking pe K-Dom-uri
+            return 0;
+        }
+
+        /// <summary>
+        /// Obține K-Dom-urile cu cel mai multe colaborări pentru un user
+        /// </summary>
+        public async Task<List<KDom>> GetUserTopCollaborativeKDomsAsync(int userId, int limit = 5)
+        {
+            var pipeline = new[]
+            {
+                new BsonDocument("$match", new BsonDocument("userId", userId)),
+                new BsonDocument("$addFields", new BsonDocument
+                {
+                    { "collaboratorCount", new BsonDocument("$size", "$collaborators") }
+                }),
+                new BsonDocument("$sort", new BsonDocument("collaboratorCount", -1)),
+                new BsonDocument("$limit", limit)
+            };
+
+            var cursor = await _collection.AggregateAsync<KDom>(pipeline);
+            return await cursor.ToListAsync();
+        }
+
+        /// <summary>
+        /// Obține ultimele K-Dom-uri editate de un utilizator
+        /// </summary>
+        public async Task<List<KDom>> GetUserRecentlyEditedKDomsAsync(int userId, int limit = 10)
+        {
+            // Găsește ultimele editări ale user-ului
+            var recentEdits = await _context.KDomEdits
+                .Find(e => e.UserId == userId)
+                .SortByDescending(e => e.EditedAt)
+                .Limit(limit)
+                .ToListAsync();
+
+            var kdomIds = recentEdits.Select(e => e.KDomId).Distinct().ToList();
+
+            return await _collection
+                .Find(k => kdomIds.Contains(k.Id))
+                .ToListAsync();
+        }
     }
 }

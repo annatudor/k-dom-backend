@@ -83,6 +83,9 @@ namespace KDomBackend.Services.Implementations
                 if (!passwordMatch)
                     throw new Exception("Invalid password.");
 
+                // ACTUALIZARE: Înregistrează ultima autentificare
+                await _userRepository.UpdateLastLoginAsync(user.Id);
+
                 var token = _jwtHelper.GenerateToken(user);
 
                 await _auditLogRepository.CreateAsync(new AuditLog
@@ -99,7 +102,6 @@ namespace KDomBackend.Services.Implementations
             }
             catch (Exception ex)
             {
-
                 await _auditLogRepository.CreateAsync(new AuditLog
                 {
                     UserId = null,

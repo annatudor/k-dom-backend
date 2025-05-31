@@ -112,6 +112,133 @@ namespace KDomBackend.Repositories.Implementations
             return comments.Select(c => c.TargetId).Distinct().ToList();
         }
 
+        public async Task<int> GetCommentCountByUserAsync(int userId)
+        {
+            var filter = Builders<Comment>.Filter.Eq(c => c.UserId, userId);
+            return (int)await _collection.CountDocumentsAsync(filter);
+        }
 
+        public async Task<int> GetCommentsReceivedByUserAsync(int userId)
+        {
+            // Găsește toate comentariile pe posturile acestui user
+            // Această implementare necesită să correlezi cu PostRepository
+            // Pentru acum, returnăm 0 și implementăm în service
+            return 0;
+        }
+
+        public async Task<List<Comment>> GetCommentsByUserAsync(int userId, int limit = 50)
+        {
+            return await _collection
+                .Find(c => c.UserId == userId)
+                .SortByDescending(c => c.CreatedAt)
+                .Limit(limit)
+                .ToListAsync();
+        }
+
+        public async Task<int> GetTotalLikesReceivedByUserCommentsAsync(int userId)
+        {
+            var pipeline = new[]
+            {
+                new BsonDocument("$match", new BsonDocument("userId", userId)),
+                new BsonDocument("$group", new BsonDocument
+                {
+                    { "_id", BsonNull.Value },
+                    { "totalLikes", new BsonDocument("$sum", new BsonDocument("$size", "$likes")) }
+                })
+            };
+
+            var cursor = await _collection.AggregateAsync<BsonDocument>(pipeline);
+            var result = await cursor.FirstOrDefaultAsync();
+
+            return result?["totalLikes"]?.AsInt32 ?? 0;
+        }
+
+        public async Task<int> GetTotalLikesGivenByUserAsync(int userId)
+        {
+            var filter = Builders<Comment>.Filter.AnyEq(c => c.Likes, userId);
+            return (int)await _collection.CountDocumentsAsync(filter);
+        }
+
+        public async Task<List<Comment>> GetCommentsOnUserKDomsAsync(List<string> kdomIds, int limit = 100)
+        {
+            var filter = Builders<Comment>.Filter.And(
+                Builders<Comment>.Filter.Eq(c => c.TargetType, CommentTargetType.KDom),
+                Builders<Comment>.Filter.In(c => c.TargetId, kdomIds)
+            );
+
+            return await _collection
+                .Find(filter)
+                .SortByDescending(c => c.CreatedAt)
+                .Limit(limit)
+                .ToListAsync();
+        }
+
+        /// <summary>
+        /// Obține statistici de comentarii pentru ultimele X luni
+        /// </summary>
+        public async Task<Dictionary<string, int>> GetUserCommentsByMonthAsync(int userId, int months = 12)
+        {
+            var fromDate = DateTime.UtcNow.AddMonths(-months);
+
+            var pipeline = new[]
+            {
+                new BsonDocument("$match", new BsonDocument
+                {
+                    { "userId", userId },
+                    { "createdAt", new BsonDocument("$gte", fromDate) }
+                }),
+                new BsonDocument("$group", new BsonDocument
+                {
+                    { "_id", new BsonDocument("$dateToString", new BsonDocument
+                        {
+                            { "format", "%Y-%m" },
+                            { "date", "$createdAt" }
+                        })
+                    },
+                    { "count", new BsonDocument("$sum", 1) }
+                }),
+                new BsonDocument("$sort", new BsonDocument("_id", 1))
+            };
+
+            var cursor = await _collection.AggregateAsync<BsonDocument>(pipeline);
+            var results = await cursor.ToListAsync();
+
+            return results.ToDictionary(
+                doc => doc["_id"].AsString,
+                doc => doc["count"].AsInt32
+            );
+        }
+
+        /// <summary>
+        /// Obține top utilizatori care au comentat pe conținutul unui user
+        /// </summary>
+        public async Task<Dictionary<int, int>> GetTopCommentersOnUserContentAsync(int userId, List<string> userContentIds, int limit = 10)
+        {
+            var pipeline = new[]
+            {
+                new BsonDocument("$match", new BsonDocument
+                {
+                    { "targetId", new BsonDocument("$in", new BsonArray(userContentIds)) },
+                    { "userId", new BsonDocument("$ne", userId) } // Exclude propria activitate
+                }),
+                new BsonDocument("$group", new BsonDocument
+                {
+                    { "_id", "$userId" },
+                    { "commentCount", new BsonDocument("$sum", 1) }
+                }),
+                new BsonDocument("$sort", new BsonDocument("commentCount", -1)),
+                new BsonDocument("$limit", limit)
+            };
+
+            var cursor = await _collection.AggregateAsync<BsonDocument>(pipeline);
+            var results = await cursor.ToListAsync();
+
+            return results.ToDictionary(
+                doc => doc["_id"].AsInt32,
+                doc => doc["commentCount"].AsInt32
+            );
+        }
     }
+
 }
+

@@ -117,5 +117,36 @@ namespace KDomBackend.Controllers
                 return BadRequest(new { error = ex.Message });
             }
         }
+
+        [HttpGet("{userId}/private")]
+        public async Task<IActionResult> GetUserPrivateInfo(int userId)
+        {
+            try
+            {
+                var adminUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                var privateInfo = await _userProfileService.GetUserPrivateInfoAsync(userId, adminUserId);
+                return Ok(privateInfo);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("{userId}/detailed-stats")]
+        public async Task<IActionResult> GetUserDetailedStats(int userId)
+        {
+            try
+            {
+                var adminUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                var stats = await _userProfileService.GetUserDetailedStatsAsync(userId, adminUserId);
+                return Ok(stats);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
     }
 }

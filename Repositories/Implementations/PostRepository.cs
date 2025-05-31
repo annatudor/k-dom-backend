@@ -131,6 +131,162 @@ namespace KDomBackend.Repositories.Implementations
                 .ToListAsync();
         }
 
+        /// <summary>
+        /// Obține numărul total de postări ale unui utilizator
+        /// </summary>
+        public async Task<int> GetPostCountByUserAsync(int userId)
+        {
+            var filter = Builders<Post>.Filter.Eq(p => p.UserId, userId);
+            return (int)await _collection.CountDocumentsAsync(filter);
+        }
+
+        /// <summary>
+        /// Obține postările unui utilizator cu limit
+        /// </summary>
+        public async Task<List<Post>> GetPostsByUserAsync(int userId, int limit = 50)
+        {
+            return await _collection
+                .Find(p => p.UserId == userId)
+                .SortByDescending(p => p.CreatedAt)
+                .Limit(limit)
+                .ToListAsync();
+        }
+
+        /// <summary>
+        /// Calculează totalul de like-uri primite pe postările unui user
+        /// </summary>
+        public async Task<int> GetTotalLikesReceivedByUserPostsAsync(int userId)
+        {
+            var pipeline = new[]
+            {
+                new BsonDocument("$match", new BsonDocument("userId", userId)),
+                new BsonDocument("$group", new BsonDocument
+                {
+                    { "_id", BsonNull.Value },
+                    { "totalLikes", new BsonDocument("$sum", new BsonDocument("$size", "$likes")) }
+                })
+            };
+
+            var cursor = await _collection.AggregateAsync<BsonDocument>(pipeline);
+            var result = await cursor.FirstOrDefaultAsync();
+
+            return result?["totalLikes"]?.AsInt32 ?? 0;
+        }
+
+        /// <summary>
+        /// Calculează totalul de like-uri date de un user pe postări
+        /// </summary>
+        public async Task<int> GetTotalLikesGivenByUserAsync(int userId)
+        {
+            var filter = Builders<Post>.Filter.AnyEq(p => p.Likes, userId);
+            return (int)await _collection.CountDocumentsAsync(filter);
+        }
+
+        /// <summary>
+        /// Obține statistici de postări pentru ultimele X luni
+        /// </summary>
+        public async Task<Dictionary<string, int>> GetUserPostsByMonthAsync(int userId, int months = 12)
+        {
+            var fromDate = DateTime.UtcNow.AddMonths(-months);
+
+            var pipeline = new[]
+            {
+                new BsonDocument("$match", new BsonDocument
+                {
+                    { "userId", userId },
+                    { "createdAt", new BsonDocument("$gte", fromDate) }
+                }),
+                new BsonDocument("$group", new BsonDocument
+                {
+                    { "_id", new BsonDocument("$dateToString", new BsonDocument
+                        {
+                            { "format", "%Y-%m" },
+                            { "date", "$createdAt" }
+                        })
+                    },
+                    { "count", new BsonDocument("$sum", 1) }
+                }),
+                new BsonDocument("$sort", new BsonDocument("_id", 1))
+            };
+
+            var cursor = await _collection.AggregateAsync<BsonDocument>(pipeline);
+            var results = await cursor.ToListAsync();
+
+            return results.ToDictionary(
+                doc => doc["_id"].AsString,
+                doc => doc["count"].AsInt32
+            );
+        }
+
+        /// <summary>
+        /// Obține ID-urile postărilor unui user (pentru calculul comentariilor)
+        /// </summary>
+        public async Task<List<string>> GetUserPostIdsAsync(int userId)
+        {
+            var filter = Builders<Post>.Filter.Eq(p => p.UserId, userId);
+            var projection = Builders<Post>.Projection.Include(p => p.Id);
+
+            var cursor = await _collection.Find(filter).Project(projection).ToCursorAsync();
+            var results = await cursor.ToListAsync();
+
+            return results.Select(doc => doc["_id"].AsString).ToList();
+        }
+
+        /// <summary>
+        /// Placeholder pentru views (când implementăm tracking-ul)
+        /// </summary>
+        public async Task<int> GetUserPostViewsAsync(int userId)
+        {
+            // Pentru viitor - când implementăm view tracking
+            // Momentan returnăm 0
+            return 0;
+        }
+
+        /// <summary>
+        /// Obține postările cu cel mai mare engagement pentru un user
+        /// </summary>
+        public async Task<List<Post>> GetUserTopPostsByEngagementAsync(int userId, int limit = 5)
+        {
+            var pipeline = new[]
+            {
+                new BsonDocument("$match", new BsonDocument("userId", userId)),
+                new BsonDocument("$addFields", new BsonDocument
+                {
+                    { "engagement", new BsonDocument("$size", "$likes") }
+                }),
+                new BsonDocument("$sort", new BsonDocument("engagement", -1)),
+                new BsonDocument("$limit", limit)
+            };
+
+            var cursor = await _collection.AggregateAsync<Post>(pipeline);
+            return await cursor.ToListAsync();
+        }
+
+        /// <summary>
+        /// Obține distribuția tag-urilor pentru postările unui user
+        /// </summary>
+        public async Task<Dictionary<string, int>> GetUserTagDistributionAsync(int userId)
+        {
+            var pipeline = new[]
+            {
+                new BsonDocument("$match", new BsonDocument("userId", userId)),
+                new BsonDocument("$unwind", "$tags"),
+                new BsonDocument("$group", new BsonDocument
+                {
+                    { "_id", "$tags" },
+                    { "count", new BsonDocument("$sum", 1) }
+                }),
+                new BsonDocument("$sort", new BsonDocument("count", -1))
+            };
+
+            var cursor = await _collection.AggregateAsync<BsonDocument>(pipeline);
+            var results = await cursor.ToListAsync();
+
+            return results.ToDictionary(
+                doc => doc["_id"].AsString,
+                doc => doc["count"].AsInt32
+            );
+        }
 
     }
 }

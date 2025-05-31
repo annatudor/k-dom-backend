@@ -31,6 +31,15 @@ namespace KDomBackend.Repositories.Interfaces
         Task<List<KDom>> GetOwnedOrCollaboratedByUserAsync(int userId);
         Task<KDom?> GetBySlugAsync(string slug);
 
+        Task<int> GetCreatedKDomsCountByUserAsync(int userId);
+        Task<int> GetCollaboratedKDomsCountByUserAsync(int userId);
+        Task<List<KDom>> GetKDomsByUserAsync(int userId, bool includeCollaborated = true);
+        Task<int> GetUserKDomViewsAsync(int userId); // Pentru viitor
+        Task<int> GetUserKDomEditsCountAsync(int userId);
+        Task<List<string>> GetUserKDomIdsAsync(int userId, bool includeCollaborated = true);
+        Task<Dictionary<string, int>> GetUserKDomsByHubAsync(int userId);
+        Task<Dictionary<string, int>> GetUserKDomsByLanguageAsync(int userId);
+
 
     }
 }
