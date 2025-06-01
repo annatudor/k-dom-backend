@@ -1,4 +1,5 @@
 ﻿using KDomBackend.Models.DTOs.Flag;
+using KDomBackend.Enums;
 
 namespace KDomBackend.Services.Interfaces
 {

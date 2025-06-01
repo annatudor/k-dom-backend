@@ -3,7 +3,6 @@ using KDomBackend.Repositories.Interfaces;
 using KDomBackend.Models.DTOs.Flag;
 using KDomBackend.Services.Interfaces;
 using KDomBackend.Enums;
-using KDomBackend.Repositories.Implementations;
 
 namespace KDomBackend.Services.Implementations
 {
@@ -11,15 +10,29 @@ namespace KDomBackend.Services.Implementations
     {
         private readonly IFlagRepository _repository;
         private readonly IAuditLogRepository _auditLogRepository;
+        private readonly IKDomRepository _kdomRepository; 
+        private readonly IPostRepository _postRepository; 
+        private readonly ICommentRepository _commentRepository;
 
-        public FlagService(IFlagRepository repository, IAuditLogRepository auditLogRepository)
+        public FlagService(
+            IFlagRepository repository,
+            IAuditLogRepository auditLogRepository,
+            IKDomRepository kdomRepository,
+            IPostRepository postRepository,
+            ICommentRepository commentRepository)
         {
             _repository = repository;
             _auditLogRepository = auditLogRepository;
+            _kdomRepository = kdomRepository;
+            _postRepository = postRepository;
+            _commentRepository = commentRepository;
         }
 
         public async Task CreateFlagAsync(int userId, FlagCreateDto dto)
         {
+
+            await ValidateContentExistsAsync(dto.ContentType, dto.ContentId);
+
             var flag = new Flag
             {
                 UserId = userId,
@@ -30,6 +43,33 @@ namespace KDomBackend.Services.Implementations
             };
 
             await _repository.CreateAsync(flag);
+        }
+
+        private async Task ValidateContentExistsAsync(ContentType contentType, string contentId)
+        {
+            switch (contentType)
+            {
+                case ContentType.KDom:
+                    var kdom = await _kdomRepository.GetByIdAsync(contentId);
+                    if (kdom == null)
+                        throw new Exception("K-Dom not found.");
+                    break;
+
+                case ContentType.Post:
+                    var post = await _postRepository.GetByIdAsync(contentId);
+                    if (post == null)
+                        throw new Exception("Post not found.");
+                    break;
+
+                case ContentType.Comment:
+                    var comment = await _commentRepository.GetByIdAsync(contentId);
+                    if (comment == null)
+                        throw new Exception("Comment not found.");
+                    break;
+
+                default:
+                    throw new ArgumentException($"Unsupported content type: {contentType}");
+            }
         }
 
         public async Task<List<FlagReadDto>> GetAllAsync()
@@ -73,7 +113,5 @@ namespace KDomBackend.Services.Implementations
                 CreatedAt = DateTime.UtcNow
             });
         }
-
-
     }
 }
