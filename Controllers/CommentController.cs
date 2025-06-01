@@ -31,11 +31,17 @@ namespace KDomBackend.Controllers
             await _commentService.CreateCommentAsync(dto, userId);
             return Ok(new { message = "Comment created successfully." });
         }
-
         [HttpGet]
         public async Task<IActionResult> Get([FromQuery] CommentTargetType targetType, [FromQuery] string targetId)
         {
-            var comments = await _commentService.GetCommentsByTargetAsync(targetType, targetId);
+
+            int? currentUserId = null;
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            }
+
+            var comments = await _commentService.GetCommentsByTargetAsync(targetType, targetId, currentUserId);
             return Ok(comments);
         }
 
@@ -43,10 +49,17 @@ namespace KDomBackend.Controllers
         [HttpGet("{id}/replies")]
         public async Task<IActionResult> GetReplies(string id)
         {
-            var replies = await _commentService.GetRepliesAsync(id);
+
+            int? currentUserId = null;
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            }
+
+            var replies = await _commentService.GetRepliesAsync(id, currentUserId);
             return Ok(replies);
         }
-       
+
         [Authorize]
         [HttpPut("{id}")]
         public async Task<IActionResult> Edit(string id, [FromBody] CommentEditDto dto)

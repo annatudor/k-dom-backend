@@ -12,4 +12,8 @@ public class CommentReadDto
     public DateTime CreatedAt { get; set; }
     public bool IsEdited { get; set; }
     public DateTime? EditedAt { get; set; }
+
+    public List<int> Likes { get; set; } = new();
+    public int LikeCount { get; set; }
+    public bool IsLikedByUser { get; set; } = false;
 }

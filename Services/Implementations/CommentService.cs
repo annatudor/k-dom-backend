@@ -73,7 +73,7 @@ namespace KDomBackend.Services.Implementations
 
         }
 
-        public async Task<List<CommentReadDto>> GetCommentsByTargetAsync(CommentTargetType type, string targetId)
+        public async Task<List<CommentReadDto>> GetCommentsByTargetAsync(CommentTargetType type, string targetId, int? currentUserId = null)
         {
             var comments = await _repository.GetByTargetAsync(type, targetId);
             var result = new List<CommentReadDto>();
@@ -81,7 +81,6 @@ namespace KDomBackend.Services.Implementations
             foreach (var comment in comments)
             {
                 var username = await _userService.GetUsernameByUserIdAsync(comment.UserId);
-
 
                 result.Add(new CommentReadDto
                 {
@@ -94,13 +93,17 @@ namespace KDomBackend.Services.Implementations
                     ParentCommentId = comment.ParentCommentId,
                     CreatedAt = comment.CreatedAt,
                     IsEdited = comment.IsEdited,
-                    EditedAt = comment.EditedAt
+                    EditedAt = comment.EditedAt,
+                    Likes = comment.Likes,
+                    LikeCount = comment.Likes.Count,
+                    IsLikedByUser = currentUserId.HasValue && comment.Likes.Contains(currentUserId.Value)
                 });
             }
 
             return result;
         }
-        public async Task<List<CommentReadDto>> GetRepliesAsync(string parentCommentId)
+
+        public async Task<List<CommentReadDto>> GetRepliesAsync(string parentCommentId, int? currentUserId = null)
         {
             var replies = await _repository.GetRepliesAsync(parentCommentId);
             var result = new List<CommentReadDto>();
@@ -120,7 +123,10 @@ namespace KDomBackend.Services.Implementations
                     ParentCommentId = comment.ParentCommentId,
                     CreatedAt = comment.CreatedAt,
                     IsEdited = comment.IsEdited,
-                    EditedAt = comment.EditedAt
+                    EditedAt = comment.EditedAt,
+                    Likes = comment.Likes,
+                    LikeCount = comment.Likes.Count,
+                    IsLikedByUser = currentUserId.HasValue && comment.Likes.Contains(currentUserId.Value)
                 });
             }
 
@@ -184,37 +190,35 @@ namespace KDomBackend.Services.Implementations
         {
             var comment = await _repository.GetByIdAsync(commentId);
             if (comment == null)
-                throw new Exception("Comentariul nu a fost găsit.");
+                throw new Exception("Comment not found.");
 
             var alreadyLiked = comment.Likes.Contains(userId);
             var like = !alreadyLiked;
 
             await _repository.ToggleLikeAsync(commentId, userId, like);
 
-            
+            // Calculează count-ul direct în loc să facă un query suplimentar
+            var newCount = like ? comment.Likes.Count + 1 : comment.Likes.Count - 1;
+
+            // Notificare doar când se adaugă like (nu când se elimină)
             if (like && comment.UserId != userId)
             {
                 var likerUsername = await _userService.GetUsernameByUserIdAsync(userId);
-
                 await _notificationService.CreateNotificationAsync(new NotificationCreateDto
                 {
                     UserId = comment.UserId,
                     Type = NotificationType.CommentLiked,
-                    Message = $"{likerUsername} ți-a apreciat comentariul.",
+                    Message = $"{likerUsername} liked your comment.",
                     TriggeredByUserId = userId,
                     TargetType = ContentType.Comment,
                     TargetId = comment.Id
                 });
             }
 
-            
-            var updated = await _repository.GetByIdAsync(commentId);
-            var count = updated?.Likes.Count ?? 0;
-
             return new CommentLikeResponseDto
             {
                 Liked = like,
-                LikeCount = count
+                LikeCount = newCount
             };
         }
 
