@@ -7,6 +7,7 @@ using System.Security.Claims;
 using KDomBackend.Repositories.Interfaces;
 using KDomBackend.Enums;
 using KDomBackend.Models.DTOs.Collaboration;
+using KDomBackend.Services.Implementations;
 
 namespace KDomBackend.Controllers
 {
@@ -18,18 +19,21 @@ namespace KDomBackend.Controllers
         private readonly ICollaborationRequestService _collaborationRequestService;
         private readonly IKDomFollowService _kdomFollowService;
         private readonly IKDomFlowService _kdomFlowService;
+        private readonly IKDomPermissionService _kdomPermissionService;
 
         public KDomController(
             IKDomReadService kdomReadService,
             ICollaborationRequestService collaborationRequestService,
             IKDomFollowService kdomFollowService,
-            IKDomFlowService kdomFlowService
+            IKDomFlowService kdomFlowService,
+            IKDomPermissionService kdomPermissionService
             )
         {
             _kdomReadService = kdomReadService;
             _collaborationRequestService = collaborationRequestService;
             _kdomFollowService = kdomFollowService;
             _kdomFlowService = kdomFlowService;
+            _kdomPermissionService = kdomPermissionService;
         }
 
         #region K-Dom CRUD Operations
@@ -743,6 +747,243 @@ namespace KDomBackend.Controllers
             {
                 var result = await _kdomReadService.GetSuggestedKdomsAsync(userId);
                 return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Verifică și validează un titlu de K-Dom
+        /// Versiune îmbunătățită a endpoint-ului /check
+        /// </summary>
+        [HttpPost("validate-title")]
+        public async Task<IActionResult> ValidateTitle([FromBody] ValidateTitleDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var exists = await _kdomReadService.ExistsByTitleOrSlugAsync(dto.Title);
+                var suggestions = exists ? await _kdomReadService.GetSimilarTitlesAsync(dto.Title) : new List<string>();
+
+                return Ok(new
+                {
+                    exists,
+                    suggestions,
+                    isValid = !exists,
+                    message = exists ? "Title already exists. Try one of the suggestions or create a different title." : "Title is available!",
+                    suggestedAlternatives = suggestions.Take(3).ToList() // Limitează la 3 sugestii
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Verifică permisiunile utilizatorului pentru un K-Dom specific
+        /// Util pentru frontend să determine ce acțiuni poate face utilizatorul
+        /// </summary>
+        [Authorize]
+        [HttpGet("{id}/permissions")]
+        public async Task<IActionResult> GetUserPermissions(string id)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                var permissions = await _kdomPermissionService.GetUserPermissionsByIdAsync(id, userId);
+                return Ok(permissions);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Verifică permisiunile utilizatorului pentru un K-Dom prin slug
+        /// </summary>
+        [Authorize]
+        [HttpGet("slug/{slug}/permissions")]
+        public async Task<IActionResult> GetUserPermissionsBySlug(string slug)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                var permissions = await _kdomPermissionService.GetUserPermissionsBySlugAsync(slug, userId);
+                return Ok(permissions);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+
+        /// <summary>
+        /// Obține statistici detaliate pentru un K-Dom
+        /// Include followers, comments, views, last activity
+        /// </summary>
+        [HttpGet("{id}/stats")]
+        public async Task<IActionResult> GetKDomStats(string id)
+        {
+            try
+            {
+                var followersCount = await _kdomFollowService.GetFollowersCountAsync(id);
+
+                // Aici ai putea adăuga și alte statistici când implementezi view tracking
+                return Ok(new KDomStatsDto
+                {
+                    FollowersCount = followersCount,
+                    ViewsCount = 0, // Placeholder până implementezi view tracking
+                    CommentsCount = 0, // Ar trebui calculat prin comment service
+                    EditsCount = 0, // Ar trebui calculat prin edit history
+                    LastActivity = DateTime.UtcNow // Placeholder
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Bulk approve multiple K-Doms (Admin only)
+        /// </summary>
+        [Authorize(Roles = "admin,moderator")]
+        [HttpPost("bulk-approve")]
+        public async Task<IActionResult> BulkApprove([FromBody] BulkOperationDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                var successCount = 0;
+                var errors = new List<string>();
+
+                foreach (var kdomId in dto.KDomIds)
+                {
+                    try
+                    {
+                        await _kdomFlowService.ApproveKdomAsync(kdomId, userId);
+                        successCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        errors.Add($"Failed to approve {kdomId}: {ex.Message}");
+                    }
+                }
+
+                return Ok(new
+                {
+                    message = $"Bulk operation completed. {successCount}/{dto.KDomIds.Count} K-Doms approved.",
+                    successCount,
+                    totalCount = dto.KDomIds.Count,
+                    errors = errors.Any() ? errors : null
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Bulk reject multiple K-Doms (Admin only)
+        /// </summary>
+        [Authorize(Roles = "admin,moderator")]
+        [HttpPost("bulk-reject")]
+        public async Task<IActionResult> BulkReject([FromBody] BulkRejectDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                var successCount = 0;
+                var errors = new List<string>();
+
+                var rejectDto = new KDomRejectDto { Reason = dto.Reason };
+
+                foreach (var kdomId in dto.KDomIds)
+                {
+                    try
+                    {
+                        await _kdomFlowService.RejectKdomAsync(kdomId, rejectDto, userId);
+                        successCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        errors.Add($"Failed to reject {kdomId}: {ex.Message}");
+                    }
+                }
+
+                return Ok(new
+                {
+                    message = $"Bulk operation completed. {successCount}/{dto.KDomIds.Count} K-Doms rejected.",
+                    successCount,
+                    totalCount = dto.KDomIds.Count,
+                    errors = errors.Any() ? errors : null
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Obține sugestii de K-Dom-uri similare pe baza unui titlu
+        /// Util pentru evitarea duplicatelor și ghidarea utilizatorilor
+        /// </summary>
+        [HttpGet("suggest-similar")]
+        public async Task<IActionResult> GetSimilarSuggestions([FromQuery] string title)
+        {
+            if (string.IsNullOrWhiteSpace(title))
+                return BadRequest(new { error = "Title parameter is required." });
+
+            try
+            {
+                var suggestions = await _kdomReadService.GetSimilarTitlesAsync(title);
+                var searchResults = await _kdomReadService.SearchTagOrSlugAsync(title);
+
+                return Ok(new
+                {
+                    similarTitles = suggestions,
+                    relatedKDoms = searchResults.Take(5), // Limitează la 5 rezultate
+                    message = suggestions.Any() ? "Found similar K-Doms" : "No similar K-Doms found"
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Verifică dacă un utilizator poate crea un sub-K-Dom pentru un parent
+        /// </summary>
+        [Authorize]
+        [HttpGet("{parentId}/can-create-sub")]
+        public async Task<IActionResult> CanCreateSubKDom(string parentId)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                var canCreate = await _kdomPermissionService.CanUserCreateSubKDomByIdAsync(parentId, userId);
+
+                return Ok(new
+                {
+                    canCreate,
+                    message = canCreate ? "You can create a sub-page for this K-Dom." : "You don't have permission to create sub-pages for this K-Dom."
+                });
             }
             catch (Exception ex)
             {

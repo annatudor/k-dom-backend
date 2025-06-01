@@ -1,4 +1,5 @@
-﻿using KDomBackend.Models.MongoEntities;
+﻿using KDomBackend.Models.DTOs.KDom;
+using KDomBackend.Models.MongoEntities;
 
 namespace KDomBackend.Services.Interfaces
 {
@@ -112,5 +113,19 @@ namespace KDomBackend.Services.Interfaces
         /// Throws UnauthorizedAccessException if user is not the owner by K-Dom slug
 
         Task EnsureUserIsOwnerBySlugAsync(string slug, int userId, string action = "perform this action");
+
+        Task<UserPermissionsDto> GetUserPermissionsByIdAsync(string kdomId, int userId);
+
+        /// Obține toate permisiunile unui utilizator pentru un K-Dom prin Slug
+   
+        Task<UserPermissionsDto> GetUserPermissionsBySlugAsync(string slug, int userId);
+
+        /// Verifică dacă un utilizator poate crea o sub-pagină pentru un K-Dom prin ID
+
+        Task<bool> CanUserCreateSubKDomByIdAsync(string parentKDomId, int userId);
+
+        /// Verifică dacă un utilizator poate crea o sub-pagină pentru un K-Dom prin Slug
+
+        Task<bool> CanUserCreateSubKDomBySlugAsync(string parentSlug, int userId);
     }
 }

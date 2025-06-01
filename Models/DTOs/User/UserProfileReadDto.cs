@@ -18,26 +18,24 @@ namespace KDomBackend.Models.DTOs.User
 
         public DateTime JoinedAt { get; set; }
 
-        public bool? IsFollowedByCurrentUser { get; set; } // Null dacă nu e logat
+        public bool? IsFollowedByCurrentUser { get; set; }
 
-        // Activitate și contribuții (NOI)
         public int CreatedKDomsCount { get; set; }
         public int CollaboratedKDomsCount { get; set; }
         public int TotalPostsCount { get; set; }
         public int TotalCommentsCount { get; set; }
         public DateTime? LastActivityAt { get; set; }
 
-        // K-Dom-uri asociate (NOI)
+
         public List<KDomDisplayDto> OwnedKDoms { get; set; } = new();
         public List<KDomDisplayDto> CollaboratedKDoms { get; set; } = new();
-        public List<KDomTagSearchResultDto> FollowedKDoms { get; set; } = new(); // Doar pentru owner/admin
-        public List<KDomDisplayDto> RecentlyViewedKDoms { get; set; } = new(); // Doar pentru owner/admin
+        public List<KDomTagSearchResultDto> FollowedKDoms { get; set; } = new();
+        public List<KDomDisplayDto> RecentlyViewedKDoms { get; set; } = new();
 
-        // Postări (NOI)
+
         public List<PostReadDto> RecentPosts { get; set; } = new();
 
-        // Context pentru vizualizare (NOI)
-        public bool IsOwnProfile { get; set; } // Dacă user-ul curent își vizualizează propriul profil
-        public bool CanEdit { get; set; } // Dacă user-ul curent poate edita acest profil
+        public bool IsOwnProfile { get; set; }
+        public bool CanEdit { get; set; }
     }
 }

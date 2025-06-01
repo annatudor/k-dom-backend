@@ -120,7 +120,6 @@ builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 builder.Services.AddScoped<IUserAdminService, UserAdminService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IKDomPermissionService, KDomPermissionService>();
-builder.Services.AddScoped<IUserProfileService, EnhancedUserProfileService>();
 
 var jwtConfig = builder.Configuration.GetSection("Jwt");
 var key = Encoding.UTF8.GetBytes(jwtConfig["SecretKey"]);

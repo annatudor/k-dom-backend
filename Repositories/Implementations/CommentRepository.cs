@@ -260,37 +260,7 @@ namespace KDomBackend.Repositories.Implementations
             return (int)await _collection.CountDocumentsAsync(filter);
         }
 
-        public async Task<int> GetCommentsCountOnPostsAsync(List<string> postIds, int excludeUserId)
-        {
-            if (!postIds.Any()) return 0;
 
-            var filter = Builders<Comment>.Filter.And(
-                Builders<Comment>.Filter.Eq(c => c.TargetType, CommentTargetType.Post),
-                Builders<Comment>.Filter.In(c => c.TargetId, postIds),
-                Builders<Comment>.Filter.Ne(c => c.UserId, excludeUserId) // Exclude propriile comentarii
-            );
-
-            return (int)await _collection.CountDocumentsAsync(filter);
-        }
-
-        /// <summary>
-        /// Versiune îmbunătățită pentru calcularea comentariilor primite
-        /// </summary>
-        public async Task<int> GetCommentsReceivedByUserAsync(int userId)
-        {
-            // Această metodă calculează comentariile primite pe K-Dom-uri
-            // Comentariile pe postări sunt calculate separat prin GetCommentsCountOnPostsAsync
-
-            var filter = Builders<Comment>.Filter.And(
-                Builders<Comment>.Filter.Eq(c => c.TargetType, CommentTargetType.KDom),
-                Builders<Comment>.Filter.Ne(c => c.UserId, userId) // Exclude propriile comentarii
-            );
-
-            // Pentru a verifica dacă comentariile sunt pe K-Dom-urile user-ului,
-            // implementarea corectă ar necesita join cu KDomRepository
-            // Pentru acum, returnăm numărul total și va fi rafinat în service
-            return (int)await _collection.CountDocumentsAsync(filter);
-        }
     }
 
 }

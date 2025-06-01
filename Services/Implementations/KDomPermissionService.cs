@@ -1,4 +1,5 @@
-﻿using KDomBackend.Models.MongoEntities;
+﻿using KDomBackend.Models.DTOs.KDom;
+using KDomBackend.Models.MongoEntities;
 using KDomBackend.Repositories.Interfaces;
 using KDomBackend.Services.Interfaces;
 
@@ -263,5 +264,66 @@ namespace KDomBackend.Services.Implementations
 
             EnsureUserIsOwner(kdom, userId, action);
         }
+
+        public async Task<UserPermissionsDto> GetUserPermissionsByIdAsync(string kdomId, int userId)
+        {
+            var kdom = await _kdomRepository.GetByIdAsync(kdomId);
+            if (kdom == null)
+                throw new Exception("K-Dom not found.");
+
+            return await BuildUserPermissionsDto(kdom, userId);
+        }
+
+        /// <summary>
+        /// Obține toate permisiunile unui utilizator pentru un K-Dom prin Slug
+        /// </summary>
+        public async Task<UserPermissionsDto> GetUserPermissionsBySlugAsync(string slug, int userId)
+        {
+            var kdom = await _kdomRepository.GetBySlugAsync(slug);
+            if (kdom == null)
+                throw new Exception("K-Dom not found.");
+
+            return await BuildUserPermissionsDto(kdom, userId);
+        }
+
+        public async Task<bool> CanUserCreateSubKDomByIdAsync(string parentKDomId, int userId)
+        {
+            // Pentru a crea o sub-pagină, utilizatorul trebuie să aibă permisiuni de editare pe parent
+            return await CanUserEditKDomByIdAsync(parentKDomId, userId);
+        }
+
+        /// <summary>
+        /// Verifică dacă un utilizator poate crea o sub-pagină pentru un K-Dom prin Slug
+        /// </summary>
+        public async Task<bool> CanUserCreateSubKDomBySlugAsync(string parentSlug, int userId)
+        {
+            // Pentru a crea o sub-pagină, utilizatorul trebuie să aibă permisiuni de editare pe parent
+            return await CanUserEditKDomBySlugAsync(parentSlug, userId);
+        }
+
+        private async Task<UserPermissionsDto> BuildUserPermissionsDto(KDom kdom, int userId)
+        {
+            var isOwner = IsUserOwner(kdom, userId);
+            var isCollaborator = IsUserCollaborator(kdom, userId);
+            var isAdminOrMod = await IsUserAdminOrModeratorAsync(userId);
+
+            var canEdit = await CanUserEditKDomAsync(kdom, userId);
+            var canViewSensitive = await CanUserViewSensitiveInfoAsync(kdom, userId);
+
+            return new UserPermissionsDto
+            {
+                IsOwner = isOwner,
+                IsCollaborator = isCollaborator,
+                IsAdminOrModerator = isAdminOrMod,
+                CanEdit = canEdit,
+                CanViewSensitive = canViewSensitive,
+                CanCreateSubPages = canEdit, // Dacă poate edita, poate crea sub-pagini
+                CanManageCollaborators = isOwner || isAdminOrMod, // Doar owner și admin/mod
+                CanViewEditHistory = canViewSensitive, // Același cu sensitive info
+                CanApproveReject = isAdminOrMod, // Doar admin/moderator
+                
+            };
+        }
+
     }
 }
