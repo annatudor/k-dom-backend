@@ -224,24 +224,53 @@ namespace KDomBackend.Repositories.Implementations
             return 0; // Implementare în service
         }
 
+        /// <summary>
+        /// PLACEHOLDER - Calculat în UserProfileService prin IKDomRepository  
+        /// </summary>
         public async Task<int> GetUserKDomsCollaboratedCountAsync(int userId)
         {
-            // Similar, implementare în service prin IKDomRepository
-            return 0;
+            return 0; // Implementat în UserProfileService
         }
 
+        /// <summary>
+        /// PLACEHOLDER - Calculat în UserProfileService prin IPostRepository
+        /// </summary>
         public async Task<int> GetUserPostsCountAsync(int userId)
         {
-            // Similar, implementare în service prin IPostRepository
-            return 0;
+            return 0; // Implementat în UserProfileService
         }
 
+        /// <summary>
+        /// PLACEHOLDER - Calculat în UserProfileService prin ICommentRepository
+        /// </summary>
         public async Task<int> GetUserCommentsCountAsync(int userId)
         {
-            // Similar, implementare în service prin ICommentRepository
-            return 0;
+            return 0; // Implementat în UserProfileService
         }
 
+        /// <summary>
+        /// PLACEHOLDER - Calculat în UserProfileService prin agregare
+        /// </summary>
+        public async Task<int> GetUserTotalLikesReceivedAsync(int userId)
+        {
+            return 0; // Implementat în UserProfileService
+        }
+
+        /// <summary>
+        /// PLACEHOLDER - Calculat în UserProfileService prin agregare
+        /// </summary>
+        public async Task<int> GetUserTotalLikesGivenAsync(int userId)
+        {
+            return 0; // Implementat în UserProfileService
+        }
+
+        /// <summary>
+        /// PLACEHOLDER - Calculat în UserProfileService prin agregare
+        /// </summary>
+        public async Task<int> GetUserCommentsReceivedAsync(int userId)
+        {
+            return 0; // Implementat în UserProfileService
+        }
         public async Task<DateTime?> GetUserLastActivityAsync(int userId)
         {
             using var conn = _context.CreateConnection();
@@ -252,24 +281,6 @@ namespace KDomBackend.Repositories.Implementations
                 AND action IN ('CreateKDom', 'EditKDom', 'CreatePost', 'CreateComment')";
 
             return await conn.QueryFirstOrDefaultAsync<DateTime?>(sql, new { UserId = userId });
-        }
-
-        public async Task<int> GetUserTotalLikesReceivedAsync(int userId)
-        {
-            // Implementare prin aggregare din MongoDB (posts + comments)
-            return 0; // Implementare în service
-        }
-
-        public async Task<int> GetUserTotalLikesGivenAsync(int userId)
-        {
-            // Implementare prin aggregare din MongoDB
-            return 0; // Implementare în service
-        }
-
-        public async Task<int> GetUserCommentsReceivedAsync(int userId)
-        {
-            // Implementare prin ICommentRepository
-            return 0; // Implementare în service
         }
 
         public async Task<int> GetUserFlagsReceivedAsync(int userId)

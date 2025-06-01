@@ -233,16 +233,6 @@ namespace KDomBackend.Repositories.Implementations
         }
 
         /// <summary>
-        /// Placeholder pentru views (când implementăm tracking-ul)
-        /// </summary>
-        public async Task<int> GetUserPostViewsAsync(int userId)
-        {
-            // Pentru viitor - când implementăm view tracking
-            // Momentan returnăm 0
-            return 0;
-        }
-
-        /// <summary>
         /// Obține postările cu cel mai mare engagement pentru un user
         /// </summary>
         public async Task<List<Post>> GetUserTopPostsByEngagementAsync(int userId, int limit = 5)

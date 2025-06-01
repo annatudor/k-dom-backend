@@ -12,6 +12,7 @@
         public string? Role { get; set; } // nu e in baza de date
         public DateTime CreatedAt { get; set; }
         public bool IsActive { get; set; } = true;
+        public DateTime? LastLoginAt { get; set; }
 
     }
 }

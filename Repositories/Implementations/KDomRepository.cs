@@ -392,14 +392,6 @@ namespace KDomBackend.Repositories.Implementations
             );
         }
 
-        /// <summary>
-        /// Placeholder pentru views (când implementăm tracking-ul)
-        /// </summary>
-        public async Task<int> GetUserKDomViewsAsync(int userId)
-        {
-            // Pentru viitor - când implementăm view tracking pe K-Dom-uri
-            return 0;
-        }
 
         /// <summary>
         /// Obține K-Dom-urile cu cel mai multe colaborări pentru un user

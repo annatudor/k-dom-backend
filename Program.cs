@@ -101,6 +101,8 @@ builder.Services.AddScoped<IFollowService, FollowService>();
 builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
 builder.Services.AddScoped<IFlagRepository, FlagRepository>();
 builder.Services.AddScoped<IFlagService, FlagService>();
+builder.Services.AddScoped<IViewTrackingRepository, ViewTrackingRepository>();
+builder.Services.AddScoped<IViewTrackingService, ViewTrackingService>();
 builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<KDomValidator>();
@@ -120,6 +122,7 @@ builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 builder.Services.AddScoped<IUserAdminService, UserAdminService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IKDomPermissionService, KDomPermissionService>();
+
 
 var jwtConfig = builder.Configuration.GetSection("Jwt");
 var key = Encoding.UTF8.GetBytes(jwtConfig["SecretKey"]);

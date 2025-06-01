@@ -22,7 +22,6 @@ namespace KDomBackend.Repositories.Interfaces
         Task<int> GetTotalLikesGivenByUserAsync(int userId);
         Task<List<Post>> GetPostsByUserAsync(int userId, int limit = 50);
         Task<Dictionary<string, int>> GetUserPostsByMonthAsync(int userId, int months = 12);
-        Task<int> GetUserPostViewsAsync(int userId); // Pentru viitor când implementăm views
         Task<List<string>> GetUserPostIdsAsync(int userId); // Pentru a obține comment count
 
 

@@ -17,6 +17,7 @@ namespace KDomBackend.Services.Implementations
         private readonly IPostRepository _postRepository;
         private readonly ICommentRepository _commentRepository;
         private readonly IKDomFollowRepository _kdomFollowRepository;
+        private readonly IViewTrackingService _viewTrackingService;
 
         public UserProfileService(
             IUserRepository userRepository,
@@ -25,7 +26,8 @@ namespace KDomBackend.Services.Implementations
             IKDomRepository kdomRepository,
             IPostRepository postRepository,
             ICommentRepository commentRepository,
-            IKDomFollowRepository kdomFollowRepository)
+            IKDomFollowRepository kdomFollowRepository,
+            IViewTrackingService viewTrackingService)
         {
             _userRepository = userRepository;
             _profileRepository = profileRepository;
@@ -34,6 +36,7 @@ namespace KDomBackend.Services.Implementations
             _postRepository = postRepository;
             _commentRepository = commentRepository;
             _kdomFollowRepository = kdomFollowRepository;
+            _viewTrackingService = viewTrackingService;
         }
 
         /// <summary>
@@ -182,7 +185,7 @@ namespace KDomBackend.Services.Implementations
 
             return new UserDetailedStatsDto
             {
-                TotalKDomViews = await _kdomRepository.GetUserKDomViewsAsync(userId),
+                TotalKDomViews = await _viewTrackingService.GetUserTotalViewsAsync(userId),
                 TotalKDomEdits = await _kdomRepository.GetUserKDomEditsCountAsync(userId),
                 TotalLikesReceived = await GetUserLikesReceivedAsync(userId),
                 TotalLikesGiven = await GetUserLikesGivenAsync(userId),
