@@ -20,13 +20,17 @@ namespace KDomBackend.Controllers
         private readonly IKDomFollowService _kdomFollowService;
         private readonly IKDomFlowService _kdomFlowService;
         private readonly IKDomPermissionService _kdomPermissionService;
+        private readonly IPostReadService _postReadService;
+        private readonly IKDomDiscussionService _kdomDiscussionService;
 
         public KDomController(
             IKDomReadService kdomReadService,
             ICollaborationRequestService collaborationRequestService,
             IKDomFollowService kdomFollowService,
             IKDomFlowService kdomFlowService,
-            IKDomPermissionService kdomPermissionService
+            IKDomPermissionService kdomPermissionService,
+            IPostReadService postReadService,
+            IKDomDiscussionService kdomDiscussionService
             )
         {
             _kdomReadService = kdomReadService;
@@ -34,6 +38,8 @@ namespace KDomBackend.Controllers
             _kdomFollowService = kdomFollowService;
             _kdomFlowService = kdomFlowService;
             _kdomPermissionService = kdomPermissionService;
+            _postReadService = postReadService;
+            _kdomDiscussionService = kdomDiscussionService;
         }
 
         #region K-Dom CRUD Operations
@@ -988,6 +994,99 @@ namespace KDomBackend.Controllers
             catch (Exception ex)
             {
                 return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("slug/{slug}/discussion")]
+        public async Task<IActionResult> GetKDomDiscussion(string slug, [FromQuery] KDomDiscussionFilterDto filter)
+        {
+            try
+            {
+                var discussion = await _kdomDiscussionService.GetKDomDiscussionAsync(slug, filter);
+                return Ok(discussion);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Obține doar statisticile discussion-ului pentru un K-Dom
+        /// </summary>
+        [HttpGet("slug/{slug}/discussion/stats")]
+        public async Task<IActionResult> GetDiscussionStats(string slug)
+        {
+            try
+            {
+                var stats = await _kdomDiscussionService.GetDiscussionStatsAsync(slug);
+                return Ok(stats);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Verifică dacă un K-Dom are discussion activ
+        /// </summary>
+        [HttpGet("slug/{slug}/has-discussion")]
+        public async Task<IActionResult> HasActiveDiscussion(string slug)
+        {
+            try
+            {
+                var hasDiscussion = await _kdomDiscussionService.HasActiveDiscussionAsync(slug);
+                return Ok(new
+                {
+                    slug,
+                    hasActiveDiscussion = hasDiscussion,
+                    message = hasDiscussion ? "This K-Dom has active discussions" : "No discussions yet for this K-Dom"
+                });
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Endpoint alternativ - obține postările pentru un K-Dom cu paginare
+        /// (pentru backward compatibility cu frontend-ul existent)
+        /// </summary>
+        [HttpGet("slug/{slug}/posts")]
+        public async Task<IActionResult> GetKDomPosts(string slug, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                // Verifică că K-Dom-ul există
+                var kdom = await _kdomReadService.GetKDomBySlugAsync(slug);
+
+                // Obține postările cu paginare
+                var pagedPosts = await _postReadService.GetPostsByTagAsync(slug.ToLower(), page, pageSize);
+
+                return Ok(new
+                {
+                    kdom = new
+                    {
+                        id = kdom.Id,
+                        title = kdom.Title,
+                        slug = kdom.Slug,
+                        description = kdom.Description
+                    },
+                    posts = pagedPosts,
+                    pagination = new
+                    {
+                        currentPage = pagedPosts.CurrentPage,
+                        totalPages = pagedPosts.TotalPages,
+                        totalItems = pagedPosts.TotalCount,
+                        pageSize = pagedPosts.PageSize
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { error = ex.Message });
             }
         }
 

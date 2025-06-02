@@ -1,4 +1,5 @@
 ﻿using KDomBackend.Helpers;
+using KDomBackend.Models.DTOs.Common;
 using KDomBackend.Models.DTOs.Post;
 using KDomBackend.Repositories.Interfaces;
 using KDomBackend.Services.Interfaces;
@@ -183,6 +184,48 @@ namespace KDomBackend.Services.Implementations
             }
 
             return result;
+        }
+
+        public async Task<PagedResult<PostReadDto>> GetPostsByTagAsync(string tag, int page, int pageSize)
+        {
+            var skip = (page - 1) * pageSize;
+            var totalCount = await _repository.GetCountByTagAsync(tag);
+            var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+            var posts = await _repository.GetByTagAsync(tag, skip, pageSize);
+            var result = new List<PostReadDto>();
+
+            foreach (var post in posts)
+            {
+                var username = await _userService.GetUsernameByUserIdAsync(post.UserId);
+
+                result.Add(new PostReadDto
+                {
+                    Id = post.Id,
+                    UserId = post.UserId,
+                    Username = username ?? "unknown",
+                    ContentHtml = post.ContentHtml,
+                    Tags = post.Tags,
+                    CreatedAt = post.CreatedAt,
+                    IsEdited = post.IsEdited,
+                    EditedAt = post.EditedAt,
+                    LikeCount = post.Likes.Count
+                });
+            }
+
+            return new PagedResult<PostReadDto>
+            {
+                TotalCount = totalCount,
+                PageSize = pageSize,
+                CurrentPage = page,
+                TotalPages = totalPages,
+                Items = result
+            };
+        }
+
+        public async Task<int> GetPostsCountByTagAsync(string tag)
+        {
+            return await _repository.GetCountByTagAsync(tag);
         }
     }
 }

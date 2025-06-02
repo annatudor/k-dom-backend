@@ -1,4 +1,5 @@
-﻿using KDomBackend.Models.DTOs.Post;
+﻿using KDomBackend.Models.DTOs.Common;
+using KDomBackend.Models.DTOs.Post;
 
 namespace KDomBackend.Services.Interfaces
 {
@@ -10,5 +11,7 @@ namespace KDomBackend.Services.Interfaces
         Task<List<PostReadDto>> GetFeedAsync(int userId);
         Task<List<PostReadDto>> GetGuestFeedAsync(int limit = 30);
         Task<List<PostReadDto>> GetPostsByTagAsync(string tag);
+        Task<PagedResult<PostReadDto>> GetPostsByTagAsync(string tag, int page, int pageSize);
+        Task<int> GetPostsCountByTagAsync(string tag);
     }
 }

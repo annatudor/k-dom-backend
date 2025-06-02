@@ -278,5 +278,23 @@ namespace KDomBackend.Repositories.Implementations
             );
         }
 
+        public async Task<List<Post>> GetByTagAsync(string tag, int skip, int limit)
+        {
+            var filter = Builders<Post>.Filter.AnyEq(p => p.Tags, tag.ToLower());
+            return await _collection.Find(filter)
+                                    .SortByDescending(p => p.CreatedAt)
+                                    .Skip(skip)
+                                    .Limit(limit)
+                                    .ToListAsync();
+        }
+
+        public async Task<int> GetCountByTagAsync(string tag)
+        {
+            var filter = Builders<Post>.Filter.AnyEq(p => p.Tags, tag.ToLower());
+            return (int)await _collection.CountDocumentsAsync(filter);
+        }
+
+
+
     }
 }

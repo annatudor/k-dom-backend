@@ -7,7 +7,6 @@ using System.Security.Claims;
 
 namespace KDomBackend.Controllers
 {
-    [Authorize]
     [ApiController]
     [Route("api/comments")]
     public class CommentController : ControllerBase
@@ -31,10 +30,12 @@ namespace KDomBackend.Controllers
             await _commentService.CreateCommentAsync(dto, userId);
             return Ok(new { message = "Comment created successfully." });
         }
+
+        // FIXED: Remove [Authorize] and make this endpoint public
+        [AllowAnonymous]
         [HttpGet]
         public async Task<IActionResult> Get([FromQuery] CommentTargetType targetType, [FromQuery] string targetId)
         {
-
             int? currentUserId = null;
             if (User.Identity?.IsAuthenticated == true)
             {
@@ -45,11 +46,11 @@ namespace KDomBackend.Controllers
             return Ok(comments);
         }
 
-
+        // FIXED: Remove [Authorize] and make this endpoint public for replies
+        [AllowAnonymous]
         [HttpGet("{id}/replies")]
         public async Task<IActionResult> GetReplies(string id)
         {
-
             int? currentUserId = null;
             if (User.Identity?.IsAuthenticated == true)
             {
@@ -114,7 +115,5 @@ namespace KDomBackend.Controllers
             var result = await _commentService.ToggleLikeAsync(id, userId);
             return Ok(result);
         }
-
-
     }
 }

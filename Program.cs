@@ -122,6 +122,7 @@ builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 builder.Services.AddScoped<IUserAdminService, UserAdminService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IKDomPermissionService, KDomPermissionService>();
+builder.Services.AddScoped<IKDomDiscussionService, KDomDiscussionService>();
 
 
 var jwtConfig = builder.Configuration.GetSection("Jwt");
