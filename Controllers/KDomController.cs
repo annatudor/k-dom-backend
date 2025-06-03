@@ -997,16 +997,58 @@ namespace KDomBackend.Controllers
             }
         }
 
+        // În Controllers/KDomController.cs - Adaugă debugging pentru endpoint-ul discussion
+
         [HttpGet("slug/{slug}/discussion")]
         public async Task<IActionResult> GetKDomDiscussion(string slug, [FromQuery] KDomDiscussionFilterDto filter)
         {
             try
             {
+                // ✅ DEBUG: Log request details
+                Console.WriteLine($"[KDomController] GetKDomDiscussion called with slug: {slug}");
+                Console.WriteLine($"[KDomController] Filter: Page={filter.Page}, PageSize={filter.PageSize}");
+
                 var discussion = await _kdomDiscussionService.GetKDomDiscussionAsync(slug, filter);
-                return Ok(discussion);
+
+                // ✅ DEBUG: Log response details
+                Console.WriteLine($"[KDomController] Discussion result:");
+                Console.WriteLine($"  - KDom ID: {discussion.KDom?.Id}");
+                Console.WriteLine($"  - KDom Title: {discussion.KDom?.Title}");
+                Console.WriteLine($"  - KDom Author: {discussion.KDom?.AuthorUsername}");
+                Console.WriteLine($"  - KDom Followers: {discussion.KDom?.FollowersCount}");
+                Console.WriteLine($"  - Posts Count: {discussion.Posts?.Items?.Count}");
+                Console.WriteLine($"  - Stats Total Posts: {discussion.Stats?.TotalPosts}");
+
+                // ✅ DEBUG: Verifică dacă toate proprietățile sunt populate
+                if (discussion.KDom == null)
+                {
+                    Console.WriteLine("[KDomController] WARNING: KDom object is null!");
+                }
+
+                if (string.IsNullOrEmpty(discussion.KDom?.AuthorUsername))
+                {
+                    Console.WriteLine("[KDomController] WARNING: AuthorUsername is missing!");
+                }
+
+                var response = new
+                {
+                    kdom = discussion.KDom,
+                    posts = discussion.Posts,
+                    stats = discussion.Stats
+                };
+
+                // ✅ DEBUG: Log exact response structure
+                Console.WriteLine($"[KDomController] Returning response structure:");
+                Console.WriteLine($"  - response.kdom is null: {response.kdom == null}");
+                Console.WriteLine($"  - response.posts is null: {response.posts == null}");
+                Console.WriteLine($"  - response.stats is null: {response.stats == null}");
+
+                return Ok(response);
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[KDomController] Error in GetKDomDiscussion: {ex.Message}");
+                Console.WriteLine($"[KDomController] Stack trace: {ex.StackTrace}");
                 return NotFound(new { error = ex.Message });
             }
         }
