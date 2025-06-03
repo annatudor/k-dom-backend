@@ -294,7 +294,95 @@ namespace KDomBackend.Repositories.Implementations
             return (int)await _collection.CountDocumentsAsync(filter);
         }
 
+        public async Task<List<Post>> SearchPostsByTagAsync(string tag, string? contentQuery = null,
+    string? username = null, string sortBy = "newest", bool? onlyLiked = null,
+    int? lastDays = null, int skip = 0, int limit = 20)
+        {
+            var filterBuilder = Builders<Post>.Filter;
+            var filters = new List<FilterDefinition<Post>>();
 
+            // Filtru pentru tag
+            filters.Add(filterBuilder.AnyEq(p => p.Tags, tag.ToLower()));
+
+            // Filtru pentru conținut
+            if (!string.IsNullOrWhiteSpace(contentQuery))
+            {
+                var contentRegex = new BsonRegularExpression(contentQuery, "i");
+                filters.Add(filterBuilder.Regex(p => p.ContentHtml, contentRegex));
+            }
+
+            // Filtru pentru perioada
+            if (lastDays.HasValue)
+            {
+                var fromDate = DateTime.UtcNow.AddDays(-lastDays.Value);
+                filters.Add(filterBuilder.Gte(p => p.CreatedAt, fromDate));
+            }
+
+            // Filtru pentru like-uri
+            if (onlyLiked == true)
+            {
+                filters.Add(filterBuilder.SizeGt(p => p.Likes, 0));
+            }
+
+            var combinedFilter = filterBuilder.And(filters);
+
+            // Determinăm sortarea
+            SortDefinition<Post> sortDefinition = sortBy.ToLower() switch
+            {
+                "oldest" => Builders<Post>.Sort.Ascending(p => p.CreatedAt),
+                "most-liked" => Builders<Post>.Sort.Descending(p => p.Likes),
+                _ => Builders<Post>.Sort.Descending(p => p.CreatedAt) // newest (default)
+            };
+
+            var posts = await _collection
+                .Find(combinedFilter)
+                .Sort(sortDefinition)
+                .Skip(skip)
+                .Limit(limit)
+                .ToListAsync();
+
+            // Filtrăm după username dacă este specificat (nu putem face asta direct în MongoDB)
+            if (!string.IsNullOrWhiteSpace(username))
+            {
+                // Va trebui să obținem username-urile prin UserService în service layer
+                // Aici doar returnăm toate postările, filtrarea se va face în service
+            }
+
+            return posts;
+        }
+
+        public async Task<int> CountSearchPostsByTagAsync(string tag, string? contentQuery = null,
+            string? username = null, bool? onlyLiked = null, int? lastDays = null)
+        {
+            var filterBuilder = Builders<Post>.Filter;
+            var filters = new List<FilterDefinition<Post>>();
+
+            // Filtru pentru tag
+            filters.Add(filterBuilder.AnyEq(p => p.Tags, tag.ToLower()));
+
+            // Filtru pentru conținut
+            if (!string.IsNullOrWhiteSpace(contentQuery))
+            {
+                var contentRegex = new BsonRegularExpression(contentQuery, "i");
+                filters.Add(filterBuilder.Regex(p => p.ContentHtml, contentRegex));
+            }
+
+            // Filtru pentru perioada
+            if (lastDays.HasValue)
+            {
+                var fromDate = DateTime.UtcNow.AddDays(-lastDays.Value);
+                filters.Add(filterBuilder.Gte(p => p.CreatedAt, fromDate));
+            }
+
+            // Filtru pentru like-uri
+            if (onlyLiked == true)
+            {
+                filters.Add(filterBuilder.SizeGt(p => p.Likes, 0));
+            }
+
+            var combinedFilter = filterBuilder.And(filters);
+            return (int)await _collection.CountDocumentsAsync(combinedFilter);
+        }
 
     }
 }

@@ -28,6 +28,13 @@ namespace KDomBackend.Repositories.Interfaces
         Task<Dictionary<string, int>> GetUserPostsByMonthAsync(int userId, int months = 12);
         Task<List<string>> GetUserPostIdsAsync(int userId); // Pentru a obține comment count
 
+        Task<List<Post>> SearchPostsByTagAsync(string tag, string? contentQuery = null,
+                string? username = null, string sortBy = "newest", bool? onlyLiked = null,
+                int? lastDays = null, int skip = 0, int limit = 20);
+
+        Task<int> CountSearchPostsByTagAsync(string tag, string? contentQuery = null,
+                string? username = null, bool? onlyLiked = null, int? lastDays = null);
+
 
     }
 }

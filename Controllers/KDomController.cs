@@ -1090,6 +1090,44 @@ namespace KDomBackend.Controllers
             }
         }
 
+        /// Caută în discussion-ul unui K-Dom
+        [HttpGet("slug/{slug}/discussion/search")]
+        public async Task<IActionResult> SearchKDomDiscussion(string slug, [FromQuery] KDomDiscussionSearchDto searchDto)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(searchDto.ContentQuery) &&
+                    string.IsNullOrWhiteSpace(searchDto.Username))
+                {
+                    return BadRequest(new { error = "At least one search parameter (contentQuery or username) is required." });
+                }
+
+                var discussion = await _kdomDiscussionService.SearchKDomDiscussionAsync(slug, searchDto);
+
+                return Ok(new
+                {
+                    slug,
+                    searchParams = new
+                    {
+                        contentQuery = searchDto.ContentQuery,
+                        username = searchDto.Username,
+                        sortBy = searchDto.SortBy,
+                        onlyLiked = searchDto.OnlyLiked,
+                        lastDays = searchDto.LastDays
+                    },
+                    results = discussion,
+                    message = discussion.Posts.Items.Any() ?
+                        $"Found {discussion.Posts.TotalCount} posts matching your search" :
+                        "No posts found matching your search criteria"
+                });
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+        }
+
+
         #endregion
     }
 }

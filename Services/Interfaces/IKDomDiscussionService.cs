@@ -18,5 +18,8 @@ namespace KDomBackend.Services.Interfaces
         /// Verifică dacă un K-Dom are discussion activ
         /// </summary>
         Task<bool> HasActiveDiscussionAsync(string slug);
+
+        Task<KDomDiscussionReadDto> SearchKDomDiscussionAsync(string slug, KDomDiscussionSearchDto searchDto);
+
     }
 }
