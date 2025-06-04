@@ -178,5 +178,62 @@ public class CollaborationRequestService : ICollaborationRequestService
         return result;
     }
 
+    public async Task<List<CollaborationRequestReadDto>> GetSentRequestsAsync(int userId)
+    {
+        var requests = await _repository.GetByUserIdAsync(userId);
+        var result = new List<CollaborationRequestReadDto>();
 
+        foreach (var req in requests)
+        {
+            var kdom = await _kdomRepository.GetByIdAsync(req.KDomId);
+            var kdomTitle = kdom?.Title ?? "Unknown K-Dom";
+
+            result.Add(new CollaborationRequestReadDto
+            {
+                Id = req.Id,
+                UserId = req.UserId,
+                Username = null, // Not needed for sent requests
+                Status = req.Status,
+                Message = req.Message,
+                RejectionReason = req.RejectionReason,
+                CreatedAt = req.CreatedAt,
+                ReviewedAt = req.ReviewedAt,
+                KDomTitle = kdomTitle 
+            });
+        }
+
+        return result.OrderByDescending(r => r.CreatedAt).ToList();
+    }
+
+    public async Task<List<CollaborationRequestReadDto>> GetReceivedRequestsAsync(int userId)
+    {
+        // Get all K-Doms owned by the user
+        var userKDoms = await _kdomRepository.GetKDomsByUserAsync(userId, false); // Only owned, not collaborated
+        var result = new List<CollaborationRequestReadDto>();
+
+        foreach (var kdom in userKDoms)
+        {
+            var requests = await _repository.GetByKDomIdAsync(kdom.Id);
+
+            foreach (var req in requests)
+            {
+                var username = await _userService.GetUsernameByUserIdAsync(req.UserId);
+
+                result.Add(new CollaborationRequestReadDto
+                {
+                    Id = req.Id,
+                    UserId = req.UserId,
+                    Username = username,
+                    Status = req.Status,
+                    Message = req.Message,
+                    RejectionReason = req.RejectionReason,
+                    CreatedAt = req.CreatedAt,
+                    ReviewedAt = req.ReviewedAt,
+                    KDomTitle = kdom.Title // ✅ Add this to DTO
+                });
+            }
+        }
+
+        return result.OrderByDescending(r => r.CreatedAt).ToList();
+    }
 }

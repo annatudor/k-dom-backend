@@ -1,8 +1,9 @@
-﻿namespace KDomBackend.Models.DTOs.KDom
+﻿namespace KDomBackend.Models.DTOs.User
 {
     public class UserPermissionsDto
     {
         public bool CanEdit { get; set; }
+        public bool CanEditMetadata { get; set; }
         public bool CanViewSensitive { get; set; }
         public bool IsOwner { get; set; }
         public bool IsCollaborator { get; set; }

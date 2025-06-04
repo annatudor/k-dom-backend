@@ -12,5 +12,6 @@ namespace KDomBackend.Models.DTOs.Collaboration
         public string? RejectionReason { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? ReviewedAt { get; set; }
+        public string KDomTitle { get; set; }
     }
 }

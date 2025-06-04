@@ -1,4 +1,4 @@
-﻿using KDomBackend.Models.DTOs.KDom;
+﻿using KDomBackend.Models.DTOs.User;
 using KDomBackend.Models.MongoEntities;
 using KDomBackend.Repositories.Interfaces;
 using KDomBackend.Services.Interfaces;
@@ -324,6 +324,65 @@ namespace KDomBackend.Services.Implementations
                 
             };
         }
+
+        public async Task<bool> CanUserEditMetadataAsync(KDom kdom, int userId)
+        {
+            // Only owner can edit metadata
+            if (IsUserOwner(kdom, userId))
+                return true;
+
+            // Admins and moderators can edit metadata
+            if (await IsUserAdminOrModeratorAsync(userId))
+                return true;
+
+            return false;
+        }
+
+        public async Task<bool> CanUserEditMetadataByIdAsync(string kdomId, int userId)
+        {
+            var kdom = await _kdomRepository.GetByIdAsync(kdomId);
+            if (kdom == null)
+                throw new Exception("K-Dom not found.");
+
+            return await CanUserEditMetadataAsync(kdom, userId);
+        }
+
+        public async Task<bool> CanUserEditMetadataBySlugAsync(string slug, int userId)
+        {
+            var kdom = await _kdomRepository.GetBySlugAsync(slug);
+            if (kdom == null)
+                throw new Exception("K-Dom not found.");
+
+            return await CanUserEditMetadataAsync(kdom, userId);
+        }
+
+      
+        public async Task EnsureUserCanEditMetadataAsync(KDom kdom, int userId, string action = "edit metadata for")
+        {
+            if (!await CanUserEditMetadataAsync(kdom, userId))
+            {
+                throw new UnauthorizedAccessException($"Only the owner can {action} this K-Dom. Collaborators can edit content but not metadata.");
+            }
+        }
+
+        public async Task EnsureUserCanEditMetadataByIdAsync(string kdomId, int userId, string action = "edit metadata for")
+        {
+            var kdom = await _kdomRepository.GetByIdAsync(kdomId);
+            if (kdom == null)
+                throw new Exception("K-Dom not found.");
+
+            await EnsureUserCanEditMetadataAsync(kdom, userId, action);
+        }
+
+        public async Task EnsureUserCanEditMetadataBySlugAsync(string slug, int userId, string action = "edit metadata for")
+        {
+            var kdom = await _kdomRepository.GetBySlugAsync(slug);
+            if (kdom == null)
+                throw new Exception("K-Dom not found.");
+
+            await EnsureUserCanEditMetadataAsync(kdom, userId, action);
+        }
+
 
     }
 }

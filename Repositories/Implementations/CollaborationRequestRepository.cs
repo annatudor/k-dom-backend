@@ -40,5 +40,11 @@ public class CollaborationRequestRepository(MongoDbContext context) : ICollabora
         return await _collection.Find(filter).SortByDescending(r => r.CreatedAt).ToListAsync();
     }
 
+    public async Task<List<KDomCollaborationRequest>> GetByUserIdAsync(int userId)
+    {
+        var filter = Builders<KDomCollaborationRequest>.Filter.Eq(r => r.UserId, userId);
+        return await _collection.Find(filter).SortByDescending(r => r.CreatedAt).ToListAsync();
+    }
+
 
 }

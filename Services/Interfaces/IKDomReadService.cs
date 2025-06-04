@@ -32,5 +32,6 @@ namespace KDomBackend.Services.Interfaces
         Task<bool> ExistsByTitleOrSlugAsync(string title);
         Task<List<string>> GetSimilarTitlesAsync(string title);
 
+
     }
 }

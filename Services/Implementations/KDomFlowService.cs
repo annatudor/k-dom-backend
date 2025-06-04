@@ -127,7 +127,7 @@ namespace KDomBackend.Services.Implementations
 
             return await PerformMetadataUpdateAsync(kdom, dto, userId);
         }
-        // NEW: Slug-based metadata update
+
         public async Task<bool> UpdateKDomMetadataBySlugAsync(string slug, KDomUpdateMetadataDto dto, int userId)
         {
             var kdom = await _kdomRepository.GetBySlugAsync(slug);
@@ -137,8 +137,7 @@ namespace KDomBackend.Services.Implementations
             return await PerformMetadataUpdateAsync(kdom, dto, userId);
         }
 
-      
-     
+
         // COMMON EDIT LOGIC (now using Permission Service)
 
         /// <summary>
@@ -146,7 +145,7 @@ namespace KDomBackend.Services.Implementations
         /// </summary>
         private async Task<bool> PerformEditAsync(KDom kdom, KDomEditDto dto, int userId)
         {
-            // Check permissions using the permission service
+           
             await _permissionService.EnsureUserCanEditKDomAsync(kdom, userId);
 
             var sanitizedHtml = HtmlSanitizerHelper.Sanitize(dto.ContentHtml);
@@ -157,7 +156,7 @@ namespace KDomBackend.Services.Implementations
 
             var edit = new KDomEdit
             {
-                KDomId = kdom.Id, // Always use the actual K-Dom ID for internal operations
+                KDomId = kdom.Id,
                 UserId = userId,
                 PreviousContentHtml = kdom.ContentHtml,
                 NewContentHtml = sanitizedHtml,
@@ -193,7 +192,7 @@ namespace KDomBackend.Services.Implementations
         private async Task<bool> PerformMetadataUpdateAsync(KDom kdom, KDomUpdateMetadataDto dto, int userId)
         {
             // Check permissions using the permission service
-            await _permissionService.EnsureUserCanEditKDomAsync(kdom, userId, "update metadata for");
+            await _permissionService.EnsureUserCanEditMetadataAsync(kdom, userId, "update metadata for");
 
             // Procesează parentId - convertește string gol în null
             string? actualParentId = string.IsNullOrWhiteSpace(dto.ParentId) ? null : dto.ParentId;
