@@ -431,5 +431,27 @@ namespace KDomBackend.Repositories.Implementations
                 .Find(k => kdomIds.Contains(k.Id))
                 .ToListAsync();
         }
+
+        public async Task<KDomEdit?> GetFirstEditByUserAsync(string kdomId, int userId)
+        {
+            return await _context.KDomEdits
+                .Find(e => e.KDomId == kdomId && e.UserId == userId)
+                .SortBy(e => e.EditedAt)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<List<KDomEdit>> GetEditsByUserAsync(string kdomId, int userId)
+        {
+            return await _context.KDomEdits
+                .Find(e => e.KDomId == kdomId && e.UserId == userId)
+                .SortByDescending(e => e.EditedAt)
+                .ToListAsync();
+        }
+
+        public async Task<int> GetEditCountByUserAsync(string kdomId, int userId)
+        {
+            return (int)await _context.KDomEdits
+                .CountDocumentsAsync(e => e.KDomId == kdomId && e.UserId == userId);
+        }
     }
 }

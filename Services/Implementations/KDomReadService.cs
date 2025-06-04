@@ -61,7 +61,9 @@ namespace KDomBackend.Services.Implementations
                 AuthorUsername = username,
                 CreatedAt = kdom.CreatedAt,
                 UpdatedAt = kdom.UpdatedAt,
-                LastEditedAt = kdom.LastEditedtAt
+                LastEditedAt = kdom.LastEditedtAt,
+                Collaborators = kdom.Collaborators,
+                ParentId = kdom.ParentId,
             };
         }
 
@@ -277,29 +279,6 @@ namespace KDomBackend.Services.Implementations
             return result;
         }
 
-        public async Task<List<CollaboratorReadDto>> GetCollaboratorsAsync(string kdomId, int requesterId)
-        {
-            var kdom = await _kdomRepository.GetByIdAsync(kdomId);
-            if (kdom == null)
-                throw new Exception("K-Dom not found.");
-
-            if (kdom.UserId != requesterId)
-                throw new UnauthorizedAccessException("Only the owner can view collaborators.");
-
-            var result = new List<CollaboratorReadDto>();
-
-            foreach (var userId in kdom.Collaborators)
-            {
-                var username = await _userService.GetUsernameByUserIdAsync(userId);
-                result.Add(new CollaboratorReadDto
-                {
-                    UserId = userId,
-                    Username = username ?? "unknown"
-                });
-            }
-
-            return result;
-        }
 
         public async Task<List<KDomTagSearchResultDto>> SearchTagOrSlugAsync(string query)
         {
@@ -450,7 +429,10 @@ namespace KDomBackend.Services.Implementations
                 AuthorUsername = username,
                 CreatedAt = kdom.CreatedAt,
                 UpdatedAt = kdom.UpdatedAt,
-                LastEditedAt = kdom.LastEditedtAt
+                LastEditedAt = kdom.LastEditedtAt,
+                ParentId = kdom.ParentId,
+                Collaborators = kdom.Collaborators,
+
             };
         }
 

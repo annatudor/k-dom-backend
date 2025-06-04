@@ -39,6 +39,10 @@ namespace KDomBackend.Repositories.Interfaces
         Task<Dictionary<string, int>> GetUserKDomsByHubAsync(int userId);
         Task<Dictionary<string, int>> GetUserKDomsByLanguageAsync(int userId);
 
+        Task<KDomEdit?> GetFirstEditByUserAsync(string kdomId, int userId);
+        Task<List<KDomEdit>> GetEditsByUserAsync(string kdomId, int userId);
+        Task<int> GetEditCountByUserAsync(string kdomId, int userId);
+
 
     }
 }

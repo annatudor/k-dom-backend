@@ -19,9 +19,6 @@ namespace KDomBackend.Services.Interfaces
         Task<KDomReadDto?> GetParentAsync(string childId);
         Task<List<KDomReadDto>> GetSiblingsAsync(string kdomId);
 
-
-        Task<List<CollaboratorReadDto>> GetCollaboratorsAsync(string kdomId, int requesterId);
-
         Task<List<KDomTrendingDto>> GetTrendingKdomsAsync(int days = 7);
         Task<List<KDomTagSearchResultDto>> GetSuggestedKdomsAsync(int userId, int limit = 10);
 

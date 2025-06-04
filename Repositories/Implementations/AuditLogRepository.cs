@@ -2,6 +2,7 @@
 using KDomBackend.Models.Entities;
 using KDomBackend.Repositories.Interfaces;
 using Dapper;
+using KDomBackend.Enums;
 
 namespace KDomBackend.Repositories.Implementations
 {
@@ -41,6 +42,23 @@ namespace KDomBackend.Repositories.Implementations
             var result = await conn.QueryAsync<AuditLog>(sql);
             return result.ToList();
         }
+        public async Task<AuditLog?> GetByKDomAndUserAsync(string kdomId, int userId, AuditAction action)
+        {
+            using var conn = _context.CreateConnection();
+            const string sql = @"
+        SELECT * FROM audit_log 
+        WHERE target_id = @KDomId 
+        AND user_id = @UserId 
+        AND action = @Action 
+        ORDER BY created_at DESC 
+        LIMIT 1";
 
+            return await conn.QueryFirstOrDefaultAsync<AuditLog>(sql, new
+            {
+                KDomId = kdomId,
+                UserId = userId,
+                Action = action.ToString()
+            });
+        }
     }
 }

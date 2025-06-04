@@ -1,4 +1,6 @@
-﻿using KDomBackend.Models.DTOs.Collaboration;
+﻿using KDomBackend.Enums;
+using KDomBackend.Models.DTOs.Collaboration;
+using KDomBackend.Repositories.Implementations;
 using KDomBackend.Repositories.Interfaces;
 using KDomBackend.Services.Interfaces;
 
@@ -9,15 +11,18 @@ namespace KDomBackend.Services.Implementations
         private readonly IKDomRepository _kdomRepository;
         private readonly IUserService _userService;
         private readonly IKDomEditRepository _kdomEditRepository;
+        private readonly IAuditLogRepository _auditLogRepository;
 
         public CollaborationStatsService(
             IKDomRepository kdomRepository,
             IUserService userService,
-            IKDomEditRepository kdomEditRepository)
+            IKDomEditRepository kdomEditRepository,
+            IAuditLogRepository auditLogRepository)
         {
             _kdomRepository = kdomRepository;
             _userService = userService;
             _kdomEditRepository = kdomEditRepository;
+            _auditLogRepository = auditLogRepository;
         }
 
         public async Task<KDomCollaborationStatsDto> GetKDomCollaborationStatsAsync(string kdomId, int requesterId)
@@ -105,28 +110,55 @@ namespace KDomBackend.Services.Implementations
                 throw new UnauthorizedAccessException("Only the owner can view detailed collaborator information.");
 
             var result = new List<CollaboratorReadDto>();
+
+            // Obține toate editările pentru acest K-Dom
             var allEdits = await _kdomRepository.GetEditsByKDomIdAsync(kdomId);
 
             foreach (var userId in kdom.Collaborators)
             {
                 var username = await _userService.GetUsernameByUserIdAsync(userId);
-                var userEdits = allEdits.Where(e => e.UserId == userId).ToList();
 
-                // Find when they were added (approximate based on first edit or collaboration request)
-                var firstEdit = userEdits.Any() ? userEdits.Min(e => e.EditedAt) : DateTime.UtcNow;
-                var lastEdit = userEdits.Any() ? userEdits.Max(e => e.EditedAt) : (DateTime?)null;
+                // Filtrează editările pentru acest user
+                var userEdits = allEdits.Where(e => e.UserId == userId).OrderByDescending(e => e.EditedAt).ToList();
 
                 result.Add(new CollaboratorReadDto
                 {
                     UserId = userId,
                     Username = username ?? "unknown",
-                    AddedAt = firstEdit, // Approximation
+                    AddedAt = userEdits.Any() ? userEdits.Last().EditedAt : DateTime.UtcNow.AddDays(-7),
                     EditCount = userEdits.Count,
-                    LastActivity = lastEdit
+                    LastActivity = userEdits.FirstOrDefault()?.EditedAt
                 });
             }
 
             return result.OrderByDescending(c => c.EditCount).ToList();
+        }
+
+        private async Task<DateTime> GetCollaboratorAddedDateAsync(string kdomId, int userId)
+        {
+            try
+            {
+                
+                var approvalLog = await _auditLogRepository.GetByKDomAndUserAsync(kdomId, userId, AuditAction.ApproveCollaboration);
+                if (approvalLog != null)
+                {
+                    return approvalLog.CreatedAt;
+                }
+
+               
+                var firstEdit = await _kdomRepository.GetFirstEditByUserAsync(kdomId, userId);
+                if (firstEdit != null)
+                {
+                    return firstEdit.EditedAt;
+                }
+
+                
+                return DateTime.UtcNow.AddDays(-7); 
+            }
+            catch
+            {
+                return DateTime.UtcNow.AddDays(-7);
+            }
         }
     }
 }

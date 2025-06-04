@@ -24,6 +24,7 @@ namespace KDomBackend.Models.DTOs.KDom
         public DateTime? UpdatedAt { get; set; }
         public DateTime? LastEditedAt { get;  set; }
         public string? ParentId { get; set; }
+        public List<int> Collaborators { get; set; } = new List<int>();
 
     }
 }

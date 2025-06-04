@@ -597,26 +597,6 @@ namespace KDomBackend.Controllers
             }
         }
 
-        [Authorize]
-        [HttpGet("{id}/collaborators")]
-        public async Task<IActionResult> GetCollaborators(string id)
-        {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-            try
-            {
-                var collaborators = await _kdomReadService.GetCollaboratorsAsync(id, userId);
-                return Ok(collaborators);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Forbid(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-        }
 
         [Authorize]
         [HttpDelete("{id}/collaborators/{userIdToRemove}")]
