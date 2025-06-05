@@ -42,7 +42,7 @@ namespace KDomBackend.Controllers
             _kdomDiscussionService = kdomDiscussionService;
         }
 
-        #region K-Dom CRUD Operations
+
 
         [Authorize]
         [HttpPost]
@@ -64,7 +64,7 @@ namespace KDomBackend.Controllers
             }
         }
 
-        // SLUG-BASED EDIT (Primary route for frontend)
+
         [Authorize]
         [HttpPut("slug/{slug}")]
         public async Task<IActionResult> EditBySlug(string slug, [FromBody] KDomEditDto dto)
@@ -96,7 +96,6 @@ namespace KDomBackend.Controllers
             }
         }
 
-        // ID-BASED EDIT (Backward compatibility)
         [Authorize]
         [HttpPut("{id}")]
         public async Task<IActionResult> EditById(string id, [FromBody] KDomEditDto dto)
@@ -128,11 +127,7 @@ namespace KDomBackend.Controllers
             }
         }
 
-        #endregion
-
-        #region Metadata Updates
-
-        // SLUG-BASED METADATA UPDATE (Primary route for frontend)
+ 
         [Authorize]
         [HttpPut("slug/{slug}/metadata")]
         public async Task<IActionResult> UpdateMetadataBySlug(string slug, [FromBody] KDomUpdateMetadataDto dto)
@@ -161,7 +156,6 @@ namespace KDomBackend.Controllers
             }
         }
 
-        // ID-BASED METADATA UPDATE (Backward compatibility)
         [HttpPut("{id}/metadata")]
         public async Task<IActionResult> UpdateMetadataById(string id, [FromBody] KDomUpdateMetadataDto dto)
         {
@@ -189,9 +183,6 @@ namespace KDomBackend.Controllers
             }
         }
 
-        #endregion
-
-        #region Read Operations
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
@@ -221,11 +212,8 @@ namespace KDomBackend.Controllers
             }
         }
 
-        #endregion
+     
 
-        #region Edit History
-
-        // SLUG-BASED EDIT HISTORY (Primary route for frontend)
         [Authorize]
         [HttpGet("slug/{slug}/edits")]
         public async Task<IActionResult> GetEditHistoryBySlug(string slug)
@@ -247,7 +235,7 @@ namespace KDomBackend.Controllers
             }
         }
 
-        // ID-BASED EDIT HISTORY (Backward compatibility)
+
         [Authorize]
         [HttpGet("{id}/edits")]
         public async Task<IActionResult> GetEditHistoryById(string id)
@@ -269,7 +257,7 @@ namespace KDomBackend.Controllers
             }
         }
 
-        // SLUG-BASED METADATA HISTORY (Primary route for frontend)
+ 
         [Authorize]
         [HttpGet("slug/{slug}/metadata-history")]
         public async Task<IActionResult> GetMetadataHistoryBySlug(string slug)
@@ -291,7 +279,6 @@ namespace KDomBackend.Controllers
             }
         }
 
-        // ID-BASED METADATA HISTORY (Backward compatibility)
         [Authorize]
         [HttpGet("{id}/metadata-history")]
         public async Task<IActionResult> GetMetadataHistoryById(string id)
@@ -313,9 +300,7 @@ namespace KDomBackend.Controllers
             }
         }
 
-        #endregion
-
-        #region Admin/Moderator Operations
+   
 
         [Authorize(Roles = "admin,moderator")]
         [HttpGet("pending")]
@@ -332,10 +317,6 @@ namespace KDomBackend.Controllers
             }
         }
 
-
-        #endregion
-
-        #region Utility Operations
 
         [HttpGet("check")]
         public async Task<IActionResult> CheckTitle([FromQuery] string title)
@@ -398,9 +379,6 @@ namespace KDomBackend.Controllers
             }
         }
 
-        #endregion
-
-        #region Hierarchical Operations
 
         [HttpGet("{id}/children")]
         public async Task<IActionResult> GetChildren(string id)
@@ -471,9 +449,6 @@ namespace KDomBackend.Controllers
             }
         }
 
-        #endregion
-
-        #region Collaboration Operations
 
         [Authorize]
         [HttpPost("{id}/collab-requests")]
@@ -583,9 +558,7 @@ namespace KDomBackend.Controllers
             }
         }
 
-        #endregion
-
-        #region Follow Operations
+     
 
         [Authorize]
         [HttpPost("{id}/follow")]
@@ -669,9 +642,7 @@ namespace KDomBackend.Controllers
             }
         }
 
-        #endregion
-
-        #region Trending and Suggestions
+ 
 
         [HttpGet("trending")]
         public async Task<IActionResult> GetTrendingKdoms([FromQuery] int days = 7)
@@ -704,10 +675,7 @@ namespace KDomBackend.Controllers
             }
         }
 
-        /// <summary>
-        /// Verifică și validează un titlu de K-Dom
-        /// Versiune îmbunătățită a endpoint-ului /check
-        /// </summary>
+       
         [HttpPost("validate-title")]
         public async Task<IActionResult> ValidateTitle([FromBody] ValidateTitleDto dto)
         {
@@ -734,10 +702,6 @@ namespace KDomBackend.Controllers
             }
         }
 
-        /// <summary>
-        /// Verifică permisiunile utilizatorului pentru un K-Dom specific
-        /// Util pentru frontend să determine ce acțiuni poate face utilizatorul
-        /// </summary>
         [Authorize]
         [HttpGet("{id}/permissions")]
         public async Task<IActionResult> GetUserPermissions(string id)
@@ -754,9 +718,6 @@ namespace KDomBackend.Controllers
             }
         }
 
-        /// <summary>
-        /// Verifică permisiunile utilizatorului pentru un K-Dom prin slug
-        /// </summary>
         [Authorize]
         [HttpGet("slug/{slug}/permissions")]
         public async Task<IActionResult> GetUserPermissionsBySlug(string slug)
@@ -774,10 +735,7 @@ namespace KDomBackend.Controllers
         }
 
 
-        /// <summary>
-        /// Obține statistici detaliate pentru un K-Dom
-        /// Include followers, comments, views, last activity
-        /// </summary>
+    
         [HttpGet("{id}/stats")]
         public async Task<IActionResult> GetKDomStats(string id)
         {
@@ -802,10 +760,7 @@ namespace KDomBackend.Controllers
         }
 
 
-        /// <summary>
-        /// Obține sugestii de K-Dom-uri similare pe baza unui titlu
-        /// Util pentru evitarea duplicatelor și ghidarea utilizatorilor
-        /// </summary>
+      
         [HttpGet("suggest-similar")]
         public async Task<IActionResult> GetSimilarSuggestions([FromQuery] string title)
         {
@@ -830,9 +785,7 @@ namespace KDomBackend.Controllers
             }
         }
 
-        /// <summary>
-        /// Verifică dacă un utilizator poate crea un sub-K-Dom pentru un parent
-        /// </summary>
+    
         [Authorize]
         [HttpGet("{parentId}/can-create-sub")]
         public async Task<IActionResult> CanCreateSubKDom(string parentId)
@@ -854,20 +807,20 @@ namespace KDomBackend.Controllers
             }
         }
 
-        // În Controllers/KDomController.cs - Adaugă debugging pentru endpoint-ul discussion
+  
 
         [HttpGet("slug/{slug}/discussion")]
         public async Task<IActionResult> GetKDomDiscussion(string slug, [FromQuery] KDomDiscussionFilterDto filter)
         {
             try
             {
-                // ✅ DEBUG: Log request details
+             
                 Console.WriteLine($"[KDomController] GetKDomDiscussion called with slug: {slug}");
                 Console.WriteLine($"[KDomController] Filter: Page={filter.Page}, PageSize={filter.PageSize}");
 
                 var discussion = await _kdomDiscussionService.GetKDomDiscussionAsync(slug, filter);
 
-                // ✅ DEBUG: Log response details
+               
                 Console.WriteLine($"[KDomController] Discussion result:");
                 Console.WriteLine($"  - KDom ID: {discussion.KDom?.Id}");
                 Console.WriteLine($"  - KDom Title: {discussion.KDom?.Title}");
@@ -876,7 +829,7 @@ namespace KDomBackend.Controllers
                 Console.WriteLine($"  - Posts Count: {discussion.Posts?.Items?.Count}");
                 Console.WriteLine($"  - Stats Total Posts: {discussion.Stats?.TotalPosts}");
 
-                // ✅ DEBUG: Verifică dacă toate proprietățile sunt populate
+             
                 if (discussion.KDom == null)
                 {
                     Console.WriteLine("[KDomController] WARNING: KDom object is null!");
@@ -894,7 +847,7 @@ namespace KDomBackend.Controllers
                     stats = discussion.Stats
                 };
 
-                // ✅ DEBUG: Log exact response structure
+      
                 Console.WriteLine($"[KDomController] Returning response structure:");
                 Console.WriteLine($"  - response.kdom is null: {response.kdom == null}");
                 Console.WriteLine($"  - response.posts is null: {response.posts == null}");
@@ -910,9 +863,7 @@ namespace KDomBackend.Controllers
             }
         }
 
-        /// <summary>
-        /// Obține doar statisticile discussion-ului pentru un K-Dom
-        /// </summary>
+    
         [HttpGet("slug/{slug}/discussion/stats")]
         public async Task<IActionResult> GetDiscussionStats(string slug)
         {
@@ -927,9 +878,6 @@ namespace KDomBackend.Controllers
             }
         }
 
-        /// <summary>
-        /// Verifică dacă un K-Dom are discussion activ
-        /// </summary>
         [HttpGet("slug/{slug}/has-discussion")]
         public async Task<IActionResult> HasActiveDiscussion(string slug)
         {
@@ -949,10 +897,6 @@ namespace KDomBackend.Controllers
             }
         }
 
-        /// <summary>
-        /// Endpoint alternativ - obține postările pentru un K-Dom cu paginare
-        /// (pentru backward compatibility cu frontend-ul existent)
-        /// </summary>
         [HttpGet("slug/{slug}/posts")]
         public async Task<IActionResult> GetKDomPosts(string slug, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
@@ -989,7 +933,6 @@ namespace KDomBackend.Controllers
             }
         }
 
-        /// Caută în discussion-ul unui K-Dom
         [HttpGet("slug/{slug}/discussion/search")]
         public async Task<IActionResult> SearchKDomDiscussion(string slug, [FromQuery] KDomDiscussionSearchDto searchDto)
         {
@@ -1026,7 +969,6 @@ namespace KDomBackend.Controllers
             }
         }
 
-
-        #endregion
     }
+
 }

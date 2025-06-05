@@ -26,5 +26,34 @@ namespace KDomBackend.Models.DTOs.KDom
         public string? ParentId { get; set; }
         public List<int> Collaborators { get; set; } = new List<int>();
 
+        public bool IsApproved { get; set; } = false;
+        public bool IsRejected { get; set; } = false;
+        public string? RejectionReason { get; set; }
+        public DateTime? ModeratedAt { get; set; }
+        public string? ModeratorUsername { get; set; }
+        public string Status {  get; set; }
+
+        public string ModerationStatus
+        {
+            get
+            {
+                if (IsApproved) return "Approved";
+                if (IsRejected) return "Rejected";
+                return "Pending";
+            }
+        }
+
+        public bool IsPending => !IsApproved && !IsRejected;
+        public bool IsModerated => IsApproved || IsRejected;
+        public TimeSpan? ProcessingTime
+        {
+            get
+            {
+                if (ModeratedAt.HasValue)
+                    return ModeratedAt.Value - CreatedAt;
+                return null;
+            }
+        }
+
     }
 }

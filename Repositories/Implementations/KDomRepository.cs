@@ -113,7 +113,11 @@ namespace KDomBackend.Repositories.Implementations
         public async Task ApproveAsync(string kdomId)
         {
             var update = Builders<KDom>.Update
-                .Set(k => k.IsApproved, true);
+                .Set(k => k.Status, "Approved")
+                .Set(k => k.IsApproved, true)
+                .Set(k => k.IsRejected, false) 
+                .Set(k => k.ModeratedAt, DateTime.UtcNow)
+                .Set(k => k.UpdatedAt, DateTime.UtcNow);
 
             await _collection.UpdateOneAsync(k => k.Id == kdomId, update);
         }
@@ -121,8 +125,12 @@ namespace KDomBackend.Repositories.Implementations
         public async Task RejectAsync(string kdomId, string reason)
         {
             var update = Builders<KDom>.Update
+                .Set(k => k.Status, "Rejected")
+                .Set(k => k.IsApproved, false) 
                 .Set(k => k.IsRejected, true)
-                .Set(k => k.RejectionReason, reason);
+                .Set(k => k.RejectionReason, reason)
+                .Set(k => k.ModeratedAt, DateTime.UtcNow)
+                .Set(k => k.UpdatedAt, DateTime.UtcNow);
 
             await _collection.UpdateOneAsync(k => k.Id == kdomId, update);
         }
@@ -252,18 +260,13 @@ namespace KDomBackend.Repositories.Implementations
         }
 
 
-        /// <summary>
-        /// Obține numărul de K-Dom-uri create de un utilizator
-        /// </summary>
+     
         public async Task<int> GetCreatedKDomsCountByUserAsync(int userId)
         {
             var filter = Builders<KDom>.Filter.Eq(k => k.UserId, userId);
             return (int)await _collection.CountDocumentsAsync(filter);
         }
 
-        /// <summary>
-        /// Obține numărul de K-Dom-uri unde utilizatorul colaborează
-        /// </summary>
         public async Task<int> GetCollaboratedKDomsCountByUserAsync(int userId)
         {
             var filter = Builders<KDom>.Filter.And(
@@ -273,9 +276,6 @@ namespace KDomBackend.Repositories.Implementations
             return (int)await _collection.CountDocumentsAsync(filter);
         }
 
-        /// <summary>
-        /// Obține K-Dom-urile unui utilizator (create + colaborate)
-        /// </summary>
         public async Task<List<KDom>> GetKDomsByUserAsync(int userId, bool includeCollaborated = true)
         {
             FilterDefinition<KDom> filter;
@@ -298,9 +298,7 @@ namespace KDomBackend.Repositories.Implementations
                 .ToListAsync();
         }
 
-        /// <summary>
-        /// Obține ID-urile K-Dom-urilor unui utilizator
-        /// </summary>
+   
         public async Task<List<string>> GetUserKDomIdsAsync(int userId, bool includeCollaborated = true)
         {
             FilterDefinition<KDom> filter;
@@ -324,9 +322,7 @@ namespace KDomBackend.Repositories.Implementations
             return results.Select(doc => doc["_id"].AsString).ToList();
         }
 
-        /// <summary>
-        /// Obține numărul de editări făcute de un utilizator pe K-Dom-uri
-        /// </summary>
+   
         public async Task<int> GetUserKDomEditsCountAsync(int userId)
         {
             // Folosește KDomEditRepository prin MongoDB context
@@ -334,9 +330,6 @@ namespace KDomBackend.Repositories.Implementations
             return (int)await _context.KDomEdits.CountDocumentsAsync(filter);
         }
 
-        /// <summary>
-        /// Obține distribuția K-Dom-urilor pe hub-uri pentru un utilizator
-        /// </summary>
         public async Task<Dictionary<string, int>> GetUserKDomsByHubAsync(int userId)
         {
             var pipeline = new[]
@@ -363,9 +356,6 @@ namespace KDomBackend.Repositories.Implementations
             );
         }
 
-        /// <summary>
-        /// Obține distribuția K-Dom-urilor pe limbi pentru un utilizator
-        /// </summary>
         public async Task<Dictionary<string, int>> GetUserKDomsByLanguageAsync(int userId)
         {
             var pipeline = new[]
@@ -393,9 +383,6 @@ namespace KDomBackend.Repositories.Implementations
         }
 
 
-        /// <summary>
-        /// Obține K-Dom-urile cu cel mai multe colaborări pentru un user
-        /// </summary>
         public async Task<List<KDom>> GetUserTopCollaborativeKDomsAsync(int userId, int limit = 5)
         {
             var pipeline = new[]
@@ -413,9 +400,6 @@ namespace KDomBackend.Repositories.Implementations
             return await cursor.ToListAsync();
         }
 
-        /// <summary>
-        /// Obține ultimele K-Dom-uri editate de un utilizator
-        /// </summary>
         public async Task<List<KDom>> GetUserRecentlyEditedKDomsAsync(int userId, int limit = 10)
         {
             // Găsește ultimele editări ale user-ului
@@ -491,6 +475,19 @@ namespace KDomBackend.Repositories.Implementations
 
             return (int)await _collection.CountDocumentsAsync(filter);
         }
+
+        public async Task<List<KDom>> GetApprovedKdomsAsync()
+        {
+            var filter = Builders<KDom>.Filter.Eq(k => k.IsApproved, true);
+            return await _collection.Find(filter).SortByDescending(k => k.CreatedAt).ToListAsync();
+        }
+
+        public async Task<List<KDom>> GetRejectedKdomsAsync()
+        {
+            var filter = Builders<KDom>.Filter.Eq(k => k.IsRejected, true);
+            return await _collection.Find(filter).SortByDescending(k => k.ModeratedAt).ToListAsync();
+        }
+
 
         public async Task<int> GetApprovedCountAsync(DateTime? fromDate = null)
         {
@@ -571,6 +568,14 @@ namespace KDomBackend.Repositories.Implementations
         {
             var kdom = await _collection.Find(k => k.Id == kdomId).FirstOrDefaultAsync();
             return kdom?.UpdatedAt;
+        }
+
+        public async Task SetModeratorAsync(string kdomId, int moderatorUserId)
+        {
+            var update = Builders<KDom>.Update
+                .Set(k => k.ModeratedByUserId, moderatorUserId);
+
+            await _collection.UpdateOneAsync(k => k.Id == kdomId, update);
         }
     }
 }

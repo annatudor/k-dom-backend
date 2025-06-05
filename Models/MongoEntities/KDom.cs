@@ -35,10 +35,27 @@ namespace KDomBackend.Models.MongoEntities
         public bool IsApproved { get; set; } = false;
         public bool IsRejected { get; set; } = false;
         public string? RejectionReason { get; set; }
+        public DateTime? ModeratedAt { get; set; }
+        public int? ModeratedByUserId { get; set; }
 
         public List<int> Collaborators { get; set; } = new();
 
+        [BsonIgnore]
+        public string ModerationStatus
+        {
+            get
+            {
+                if (IsApproved) return "Approved";
+                if (IsRejected) return "Rejected";
+                return "Pending";
+            }
+        }
 
+        [BsonIgnore]
+        public bool IsPending => !IsApproved && !IsRejected;
+
+        [BsonIgnore]
+        public bool IsModerated => IsApproved || IsRejected;
 
     }
 }

@@ -6,6 +6,7 @@ namespace KDomBackend.Models.DTOs.Moderation
     {
         [Required]
         [MinLength(1, ErrorMessage = "At least one K-Dom ID is required.")]
+        [MaxLength(50, ErrorMessage = "Maximum 50 K-Doms can be processed at once.")]
         public List<string> KDomIds { get; set; } = new();
 
         [Required]

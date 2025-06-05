@@ -47,12 +47,14 @@ namespace KDomBackend.Repositories.Interfaces
         Task<List<KDom>> GetKDomsByStatusAsync(bool isApproved, bool isRejected);
         Task<List<KDom>> GetUserKDomsWithStatusAsync(int userId);
         Task<int> GetPendingCountAsync();
+        Task<List<KDom>> GetApprovedKdomsAsync();
+        Task<List<KDom>> GetRejectedKdomsAsync();
         Task<int> GetApprovedCountAsync(DateTime? fromDate = null);
         Task<int> GetRejectedCountAsync(DateTime? fromDate = null);
         Task<List<KDom>> GetRecentlyModeratedAsync(int limit = 10);
         Task<TimeSpan> GetAverageProcessingTimeAsync();
         Task<DateTime?> GetModerationDateAsync(string kdomId);
-
+        Task SetModeratorAsync(string kdomId, int moderatorUserId);
 
     }
 }

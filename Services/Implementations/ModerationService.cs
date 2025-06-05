@@ -43,6 +43,16 @@ namespace KDomBackend.Services.Implementations
 
         public async Task<BulkModerationResultDto> BulkModerateAsync(BulkModerationDto dto, int moderatorId)
         {
+            if (dto.KDomIds.Count > 50)
+            {
+                throw new ArgumentException("Maximum 50 K-Doms can be processed in a single bulk operation.");
+            }
+            var uniqueIds = dto.KDomIds.Distinct().ToList();
+            if (uniqueIds.Count != dto.KDomIds.Count)
+            {
+                throw new ArgumentException("Duplicate K-Dom IDs found in the request.");
+            }
+
             var results = new List<ModerationResultItemDto>();
             var successCount = 0;
 
@@ -130,9 +140,10 @@ namespace KDomBackend.Services.Implementations
         {
             var kdom = await _kdomRepository.GetByIdAsync(kdomId);
             if (kdom == null)
-                throw new Exception("K-Dom not found.");
+                throw new Exception("K-DOM not found.");
 
-            // Marcăm ca respins
+            // Setăm moderatorul și respingem
+            await _kdomRepository.SetModeratorAsync(kdomId, moderatorId);
             await _kdomRepository.RejectAsync(kdomId, reason);
 
             // Audit log pentru respingere
@@ -143,21 +154,21 @@ namespace KDomBackend.Services.Implementations
                 TargetType = AuditTargetType.KDom,
                 TargetId = kdomId,
                 CreatedAt = DateTime.UtcNow,
-                Details = $"Rejected and deleted: {reason}"
+                Details = $"K-DOM rejected and will be deleted: {reason}"
             });
 
-            // Notificare către autor
+            // Notificare către autor înainte de ștergere
             await _notificationService.CreateNotificationAsync(new NotificationCreateDto
             {
                 UserId = kdom.UserId,
                 Type = NotificationType.KDomRejected,
-                Message = $"Your K-Dom '{kdom.Title}' has been rejected and removed. Reason: {reason}",
+                Message = $"Your K-DOM '{kdom.Title}' has been rejected and removed. Reason: {reason}",
                 TriggeredByUserId = moderatorId,
                 TargetType = ContentType.KDom,
                 TargetId = kdomId
             });
 
-            // Ștergem K-Dom-ul
+            // Ștergem K-DOM-ul
             await _kdomRepository.DeleteAsync(kdomId);
 
             // Audit log pentru ștergere
@@ -168,7 +179,7 @@ namespace KDomBackend.Services.Implementations
                 TargetType = AuditTargetType.KDom,
                 TargetId = kdomId,
                 CreatedAt = DateTime.UtcNow,
-                Details = $"K-Dom deleted after rejection: {kdom.Title}"
+                Details = $"K-DOM deleted after rejection: {kdom.Title}"
             });
         }
 
@@ -313,21 +324,26 @@ namespace KDomBackend.Services.Implementations
             return ModerationPriority.Low;
         }
 
-        // ✅ METODELE MUTATE DIN KDomFlowService
-
         public async Task ApproveKDomAsync(string kdomId, int moderatorId)
         {
+            // Setăm moderatorul înainte de aprobare
+            await _kdomRepository.SetModeratorAsync(kdomId, moderatorId);
+
+            // Aprobăm K-DOM-ul
             await _kdomRepository.ApproveAsync(kdomId);
 
+            // Audit log
             await _auditLogRepository.CreateAsync(new AuditLog
             {
                 UserId = moderatorId,
                 Action = AuditAction.ApproveKDom,
                 TargetType = AuditTargetType.KDom,
                 TargetId = kdomId,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                Details = "K-DOM approved"
             });
 
+            // Notificare pentru autor
             var kdom = await _kdomRepository.GetByIdAsync(kdomId);
             if (kdom != null)
             {
@@ -335,7 +351,7 @@ namespace KDomBackend.Services.Implementations
                 {
                     UserId = kdom.UserId,
                     Type = NotificationType.KDomApproved,
-                    Message = $"Your K-Dom '{kdom.Title}' has been approved.",
+                    Message = $"Your K-DOM '{kdom.Title}' has been approved and is now live!",
                     TriggeredByUserId = moderatorId,
                     TargetType = ContentType.KDom,
                     TargetId = kdomId
@@ -345,8 +361,13 @@ namespace KDomBackend.Services.Implementations
 
         public async Task RejectKDomAsync(string kdomId, string reason, int moderatorId)
         {
+            // Setăm moderatorul înainte de respingere
+            await _kdomRepository.SetModeratorAsync(kdomId, moderatorId);
+
+            // Respingem K-DOM-ul
             await _kdomRepository.RejectAsync(kdomId, reason);
 
+            // Audit log
             await _auditLogRepository.CreateAsync(new AuditLog
             {
                 UserId = moderatorId,
@@ -354,9 +375,10 @@ namespace KDomBackend.Services.Implementations
                 TargetType = AuditTargetType.KDom,
                 TargetId = kdomId,
                 CreatedAt = DateTime.UtcNow,
-                Details = reason
+                Details = $"K-DOM rejected: {reason}"
             });
 
+            // Notificare pentru autor
             var kdom = await _kdomRepository.GetByIdAsync(kdomId);
             if (kdom != null)
             {
@@ -364,7 +386,7 @@ namespace KDomBackend.Services.Implementations
                 {
                     UserId = kdom.UserId,
                     Type = NotificationType.KDomRejected,
-                    Message = $"Your K-Dom '{kdom.Title}' has been rejected. Reason: {reason}",
+                    Message = $"Your K-DOM '{kdom.Title}' has been rejected. Reason: {reason}",
                     TriggeredByUserId = moderatorId,
                     TargetType = ContentType.KDom,
                     TargetId = kdomId
@@ -483,22 +505,31 @@ namespace KDomBackend.Services.Implementations
 
         private async Task<UserKDomStatusDto> ConvertToUserKDomStatusDto(KDom kdom)
         {
-            var status = KDomModerationStatus.Pending;
-            if (kdom.IsApproved) status = KDomModerationStatus.Approved;
-            else if (kdom.IsRejected) status = KDomModerationStatus.Rejected;
+            // Folosim noile câmpuri
+            var status = kdom.IsApproved ? KDomModerationStatus.Approved :
+                         kdom.IsRejected ? KDomModerationStatus.Rejected :
+                         KDomModerationStatus.Pending;
 
-            var moderationAction = await _auditLogRepository.GetLastModerationActionAsync(kdom.Id);
-            var moderatorUsername = moderationAction?.UserId != null
-                ? await _userService.GetUsernameByUserIdAsync(moderationAction.UserId.Value)
-                : null;
+            // Încercăm să obținem moderatorul din câmpul nou
+            string? moderatorUsername = null;
+            if (kdom.ModeratedByUserId.HasValue)
+            {
+                moderatorUsername = await _userService.GetUsernameByUserIdAsync(kdom.ModeratedByUserId.Value);
+            }
+            else
+            {
+                // Fallback la audit log dacă nu avem moderatorul setat
+                var moderationAction = await _auditLogRepository.GetLastModerationActionAsync(kdom.Id);
+                if (moderationAction?.UserId != null)
+                {
+                    moderatorUsername = await _userService.GetUsernameByUserIdAsync(moderationAction.UserId.Value);
+                }
+            }
 
             TimeSpan? processingTime = null;
-            DateTime? moderatedAt = null;
-
-            if (moderationAction != null)
+            if (kdom.ModeratedAt.HasValue)
             {
-                moderatedAt = moderationAction.CreatedAt;
-                processingTime = moderationAction.CreatedAt - kdom.CreatedAt;
+                processingTime = kdom.ModeratedAt.Value - kdom.CreatedAt;
             }
 
             return new UserKDomStatusDto
@@ -509,11 +540,11 @@ namespace KDomBackend.Services.Implementations
                 CreatedAt = kdom.CreatedAt,
                 Status = status,
                 RejectionReason = kdom.RejectionReason,
-                ModeratedAt = moderatedAt,
+                ModeratedAt = kdom.ModeratedAt,
                 ModeratorUsername = moderatorUsername,
                 ProcessingTime = processingTime,
                 CanEdit = status == KDomModerationStatus.Approved,
-                CanResubmit = false // Pentru viitor - când implementăm resubmiterea
+                CanResubmit = false // Pentru viitor
             };
         }
 

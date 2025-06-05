@@ -44,8 +44,11 @@ namespace KDomBackend.Services.Implementations
                 throw new Exception("K-Dom not found.");
 
             var username = await _userService.GetUsernameByUserIdAsync(kdom.UserId);
-
-
+            string? moderatorUsername = null;
+            if (kdom.ModeratedByUserId.HasValue)
+            {
+                moderatorUsername = await _userService.GetUsernameByUserIdAsync(kdom.ModeratedByUserId.Value);
+            }
             return new KDomReadDto
             {
                 Id = kdom.Id,
@@ -64,6 +67,12 @@ namespace KDomBackend.Services.Implementations
                 LastEditedAt = kdom.LastEditedtAt,
                 Collaborators = kdom.Collaborators,
                 ParentId = kdom.ParentId,
+                Status = kdom.Status,
+                IsApproved = kdom.IsApproved,
+                IsRejected = kdom.IsRejected,
+                RejectionReason = kdom.RejectionReason,
+                ModeratedAt = kdom.ModeratedAt,
+                ModeratorUsername = moderatorUsername
             };
         }
 
@@ -414,6 +423,12 @@ namespace KDomBackend.Services.Implementations
 
             var username = await _userService.GetUsernameByUserIdAsync(kdom.UserId);
 
+            string? moderatorUsername = null;
+            if (kdom.ModeratedByUserId.HasValue)
+            {
+                moderatorUsername = await _userService.GetUsernameByUserIdAsync(kdom.ModeratedByUserId.Value);
+            }
+
             return new KDomReadDto
             {
                 Id = kdom.Id,
@@ -432,7 +447,12 @@ namespace KDomBackend.Services.Implementations
                 LastEditedAt = kdom.LastEditedtAt,
                 ParentId = kdom.ParentId,
                 Collaborators = kdom.Collaborators,
-
+                Status = kdom.Status,
+                IsApproved = kdom.IsApproved,
+                IsRejected = kdom.IsRejected,
+                RejectionReason = kdom.RejectionReason,
+                ModeratedAt = kdom.ModeratedAt,
+                ModeratorUsername = moderatorUsername
             };
         }
 
