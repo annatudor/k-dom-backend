@@ -21,6 +21,7 @@ namespace KDomBackend.Models.DTOs.Moderation
         public TimeSpan WaitingTime => DateTime.UtcNow - CreatedAt;
         public ModerationPriority Priority { get; set; } = ModerationPriority.Normal;
         public List<string> Flags { get; set; } = new(); // Pentru viitoarele flag-uri
+        public string Status { get; set; }  
     }
 
     public enum ModerationPriority

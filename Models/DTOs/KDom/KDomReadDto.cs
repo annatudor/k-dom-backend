@@ -18,11 +18,11 @@ namespace KDomBackend.Models.DTOs.KDom
         [BsonRepresentation(BsonType.String)]
         public Language Language { get; set; }
         public bool IsForKids { get; set; }
-        public int UserId { get; set; }  
+        public int UserId { get; set; }
         public string AuthorUsername { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
-        public DateTime? LastEditedAt { get;  set; }
+        public DateTime? LastEditedAt { get; set; }
         public string? ParentId { get; set; }
         public List<int> Collaborators { get; set; } = new List<int>();
 
@@ -31,29 +31,11 @@ namespace KDomBackend.Models.DTOs.KDom
         public string? RejectionReason { get; set; }
         public DateTime? ModeratedAt { get; set; }
         public string? ModeratorUsername { get; set; }
-        public string Status {  get; set; }
+        public string Status { get; set; }
+        public string ModerationStatus => Status;
+        public bool IsPending => Status == "Pending";
+        public bool IsModerated => Status == "Approved" || Status == "Rejected";
 
-        public string ModerationStatus
-        {
-            get
-            {
-                if (IsApproved) return "Approved";
-                if (IsRejected) return "Rejected";
-                return "Pending";
-            }
-        }
-
-        public bool IsPending => !IsApproved && !IsRejected;
-        public bool IsModerated => IsApproved || IsRejected;
-        public TimeSpan? ProcessingTime
-        {
-            get
-            {
-                if (ModeratedAt.HasValue)
-                    return ModeratedAt.Value - CreatedAt;
-                return null;
-            }
-        }
 
     }
 }
