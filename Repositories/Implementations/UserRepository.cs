@@ -25,22 +25,66 @@ namespace KDomBackend.Repositories.Implementations
             using var conn = _context.CreateConnection();
             const string sql = @"
         SELECT 
-            id,
-            username,
-            email,
-            password_hash AS PasswordHash,
-            provider,
-            provider_id,
-            role_id,
-            created_at,
-            is_active
-        FROM users
-        WHERE email = @Email";
+            u.id,
+            u.username,
+            u.email,
+            u.password_hash AS PasswordHash,
+            u.provider,
+            u.provider_id,
+            u.role_id,
+            u.created_at,
+            u.is_active,
+            u.last_login_at,
+            r.name AS Role
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        WHERE u.email = @Email";
 
             var user = await conn.QueryFirstOrDefaultAsync<User>(sql, new { Email = email });
+
+            if (user != null)
+            {
+                Console.WriteLine($"[DEBUG] GetByEmailAsync - Username: {user.Username}, Role: {user.Role}");
+            }
+
             return user;
         }
 
+        public async Task<User?> GetByUsernameOrEmailAsync(string identifier)
+        {
+            using var conn = _context.CreateConnection();
+            const string sql = @"
+        SELECT 
+            u.id,
+            u.username,
+            u.email,
+            u.password_hash AS PasswordHash,
+            u.provider,
+            u.provider_id,
+            u.role_id,
+            u.created_at,
+            u.is_active,
+            u.last_login_at,
+            r.name AS Role
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        WHERE u.username = @identifier OR u.email = @identifier";
+
+            var user = await conn.QueryFirstOrDefaultAsync<User>(sql, new { identifier });
+
+            Console.WriteLine($"[DEBUG] GetByUsernameOrEmailAsync - Searching for: {identifier}");
+            Console.WriteLine($"[DEBUG] GetByUsernameOrEmailAsync - User found: {user != null}");
+
+            if (user != null)
+            {
+                Console.WriteLine($"[DEBUG] GetByUsernameOrEmailAsync - Username: {user.Username}");
+                Console.WriteLine($"[DEBUG] GetByUsernameOrEmailAsync - Email: {user.Email}");
+                Console.WriteLine($"[DEBUG] GetByUsernameOrEmailAsync - Role: {user.Role}");
+                Console.WriteLine($"[DEBUG] GetByUsernameOrEmailAsync - RoleId: {user.RoleId}");
+            }
+
+            return user;
+        }
 
 
         public async Task<User?> GetByUsernameAsync(string username)
@@ -48,21 +92,31 @@ namespace KDomBackend.Repositories.Implementations
             using var conn = _context.CreateConnection();
             const string sql = @"
         SELECT 
-            id,
-            username,
-            email,
-            password_hash AS PasswordHash,
-            provider,
-            provider_id,
-            role_id,
-            created_at,
-            is_active
-        FROM users WHERE username = @Username";
+            u.id,
+            u.username,
+            u.email,
+            u.password_hash AS PasswordHash,
+            u.provider,
+            u.provider_id,
+            u.role_id,
+            u.created_at,
+            u.is_active,
+            u.last_login_at,
+            r.name AS Role
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        WHERE u.username = @Username";
 
             var user = await conn.QueryFirstOrDefaultAsync<User>(sql, new { Username = username });
 
-            Console.WriteLine($"[DEBUG] user is null: {user == null}");
-            Console.WriteLine($"[DEBUG] user.PasswordHash: {user?.PasswordHash}");
+            Console.WriteLine($"[DEBUG] GetByUsernameAsync - user is null: {user == null}");
+            if (user != null)
+            {
+                Console.WriteLine($"[DEBUG] GetByUsernameAsync - Username: {user.Username}");
+                Console.WriteLine($"[DEBUG] GetByUsernameAsync - Role: {user.Role}");
+                Console.WriteLine($"[DEBUG] GetByUsernameAsync - RoleId: {user.RoleId}");
+                Console.WriteLine($"[DEBUG] GetByUsernameAsync - PasswordHash exists: {!string.IsNullOrEmpty(user.PasswordHash)}");
+            }
 
             return user;
         }
@@ -71,19 +125,31 @@ namespace KDomBackend.Repositories.Implementations
         public async Task<User?> GetByIdAsync(int id)
         {
             using var conn = _context.CreateConnection();
-            const string sql = @"SELECT 
-                id, 
-                username, 
-                email, 
-                password_hash AS PasswordHash, 
-                provider, 
-                provider_id, 
-                role_id, 
-                created_at, 
-                is_active
-                FROM users 
-                WHERE id = @Id";
-            return await conn.QueryFirstOrDefaultAsync<User>(sql, new { Id = id });
+            const string sql = @"
+        SELECT 
+            u.id, 
+            u.username, 
+            u.email, 
+            u.password_hash AS PasswordHash, 
+            u.provider, 
+            u.provider_id, 
+            u.role_id, 
+            u.created_at, 
+            u.is_active,
+            u.last_login_at,
+            r.name AS Role
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        WHERE u.id = @Id";
+
+            var user = await conn.QueryFirstOrDefaultAsync<User>(sql, new { Id = id });
+
+            if (user != null)
+            {
+                Console.WriteLine($"[DEBUG] GetByIdAsync - Username: {user.Username}, Role: {user.Role}");
+            }
+
+            return user;
         }
 
         public async Task<int> CreateAsync(User user)
@@ -339,11 +405,13 @@ namespace KDomBackend.Repositories.Implementations
             return results.ToList();
         }
 
-        public async Task UpdateLastLoginAsync(int userId)
+        public async Task UpdateLastLoginAsync(int userId, DateTime loginTime)
         {
             using var conn = _context.CreateConnection();
             const string sql = "UPDATE users SET last_login_at = @LoginTime WHERE id = @UserId";
-            await conn.ExecuteAsync(sql, new { LoginTime = DateTime.UtcNow, UserId = userId });
+            await conn.ExecuteAsync(sql, new { LoginTime = loginTime, UserId = userId });
+
+            Console.WriteLine($"[DEBUG] UpdateLastLoginAsync - Updated last login for user {userId} at {loginTime}");
         }
 
         public async Task<DateTime?> GetLastLoginAsync(int userId)

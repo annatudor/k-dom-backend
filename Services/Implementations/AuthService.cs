@@ -69,24 +69,50 @@ namespace KDomBackend.Services.Implementations
         {
             try
             {
-                User? user = null;
+                Console.WriteLine($"[DEBUG] AuthService - Login attempt for: {dto.Identifier}");
 
+                User? user = null;
                 if (dto.Identifier.Contains("@"))
+                {
+                    Console.WriteLine($"[DEBUG] AuthService - Searching by email");
                     user = await _userRepository.GetByEmailAsync(dto.Identifier);
+                }
                 else
+                {
+                    Console.WriteLine($"[DEBUG] AuthService - Searching by username");
                     user = await _userRepository.GetByUsernameAsync(dto.Identifier);
+                }
 
                 if (user == null || !user.IsActive)
+                {
+                    Console.WriteLine($"[DEBUG] AuthService - User not found or inactive");
                     throw new Exception("User not found or inactive.");
+                }
+
+                Console.WriteLine($"[DEBUG] AuthService - User found: {user.Username}");
+                Console.WriteLine($"[DEBUG] AuthService - User Role: {user.Role}");
+                Console.WriteLine($"[DEBUG] AuthService - User RoleId: {user.RoleId}");
 
                 var passwordMatch = BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash);
                 if (!passwordMatch)
+                {
+                    Console.WriteLine($"[DEBUG] AuthService - Password verification failed");
                     throw new Exception("Invalid password.");
+                }
 
-                // ACTUALIZARE: Înregistrează ultima autentificare
-                await _userRepository.UpdateLastLoginAsync(user.Id);
+                Console.WriteLine($"[DEBUG] AuthService - Password verified successfully");
 
+                // FIX: Adaugă DateTime.UtcNow ca al doilea parametru
+                var loginTime = DateTime.UtcNow;
+                await _userRepository.UpdateLastLoginAsync(user.Id, loginTime);
+
+                Console.WriteLine($"[DEBUG] AuthService - Updated last login time");
+
+                // Generate token
+                Console.WriteLine($"[DEBUG] AuthService - Generating token for user: {user.Username}, Role: {user.Role}");
                 var token = _jwtHelper.GenerateToken(user);
+
+                Console.WriteLine($"[DEBUG] AuthService - Token generated successfully");
 
                 await _auditLogRepository.CreateAsync(new AuditLog
                 {
@@ -102,6 +128,8 @@ namespace KDomBackend.Services.Implementations
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[DEBUG] AuthService - Login failed: {ex.Message}");
+
                 await _auditLogRepository.CreateAsync(new AuditLog
                 {
                     UserId = null,
@@ -111,7 +139,6 @@ namespace KDomBackend.Services.Implementations
                     CreatedAt = DateTime.UtcNow,
                     Details = $"Login failed: {ex.Message}"
                 });
-
                 throw;
             }
         }

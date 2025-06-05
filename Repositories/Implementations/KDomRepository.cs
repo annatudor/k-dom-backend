@@ -102,8 +102,57 @@ namespace KDomBackend.Repositories.Implementations
 
         public async Task<List<KDom>> GetPendingKdomsAsync()
         {
-            var filter = Builders<KDom>.Filter.Eq(k => k.Status, "Pending");
-            return await _collection.Find(filter).SortBy(k => k.CreatedAt).ToListAsync();
+            Console.WriteLine("[DEBUG] KDomRepository - GetPendingKdomsAsync called");
+
+            // Încearcă mai multe criterii pentru a găsi K-DOM-urile pending
+            var filters = new List<FilterDefinition<KDom>>();
+
+            // Criteriu 1: Status = "Pending"
+            filters.Add(Builders<KDom>.Filter.Eq(k => k.Status, "Pending"));
+
+            // Criteriu 2: isApproved = false ȘI isRejected = false
+            filters.Add(Builders<KDom>.Filter.And(
+                Builders<KDom>.Filter.Eq(k => k.IsApproved, false),
+                Builders<KDom>.Filter.Eq(k => k.IsRejected, false)
+            ));
+
+            // Criteriu 3: Status nu este setat sau este null (K-DOM-uri vechi)
+            filters.Add(Builders<KDom>.Filter.Or(
+                Builders<KDom>.Filter.Eq(k => k.Status, null),
+                Builders<KDom>.Filter.Eq(k => k.Status, ""),
+                Builders<KDom>.Filter.Exists(k => k.Status, false)
+            ));
+
+            // Combină toate criteriile cu OR
+            var finalFilter = Builders<KDom>.Filter.Or(filters);
+
+            var result = await _collection.Find(finalFilter)
+                .SortBy(k => k.CreatedAt)
+                .ToListAsync();
+
+            Console.WriteLine($"[DEBUG] KDomRepository - Found {result.Count} pending K-DOMs");
+
+            // Debug: afișează primul K-DOM găsit
+            if (result.Any())
+            {
+                var first = result.First();
+                Console.WriteLine($"[DEBUG] First pending K-DOM: Title='{first.Title}', Status='{first.Status}', IsApproved={first.IsApproved}, IsRejected={first.IsRejected}");
+            }
+            else
+            {
+                Console.WriteLine("[DEBUG] No pending K-DOMs found, checking total count...");
+                var totalCount = await _collection.CountDocumentsAsync(Builders<KDom>.Filter.Empty);
+                Console.WriteLine($"[DEBUG] Total K-DOMs in collection: {totalCount}");
+
+                // Afișează primul K-DOM din colecție pentru debug
+                var firstAny = await _collection.Find(Builders<KDom>.Filter.Empty).FirstOrDefaultAsync();
+                if (firstAny != null)
+                {
+                    Console.WriteLine($"[DEBUG] Sample K-DOM: Title='{firstAny.Title}', Status='{firstAny.Status}', IsApproved={firstAny.IsApproved}, IsRejected={firstAny.IsRejected}");
+                }
+            }
+
+            return result;
         }
 
         public async Task ApproveAsync(string kdomId)

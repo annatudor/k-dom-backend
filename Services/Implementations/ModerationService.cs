@@ -5,6 +5,7 @@ using KDomBackend.Models.Entities;
 using KDomBackend.Models.MongoEntities;
 using KDomBackend.Repositories.Interfaces;
 using KDomBackend.Services.Interfaces;
+using KDomBackend.Enums;
 
 namespace KDomBackend.Services.Implementations
 {
@@ -29,9 +30,16 @@ namespace KDomBackend.Services.Implementations
 
         public async Task<ModerationDashboardDto> GetModerationDashboardAsync(int moderatorId)
         {
+            Console.WriteLine($"[DEBUG] ModerationService - GetModerationDashboardAsync called by user {moderatorId}");
+
             var stats = await GetModerationStatsAsync();
+            Console.WriteLine($"[DEBUG] ModerationService - Stats retrieved, TotalPending: {stats.TotalPending}");
+
             var pendingKDoms = await GetPendingKDomsForModerationAsync();
+            Console.WriteLine($"[DEBUG] ModerationService - Retrieved {pendingKDoms.Count} pending K-DOMs for moderation");
+
             var recentActions = await GetRecentModerationActionsAsync(10);
+            Console.WriteLine($"[DEBUG] ModerationService - Retrieved {recentActions.Count} recent actions");
 
             return new ModerationDashboardDto
             {
@@ -435,11 +443,17 @@ namespace KDomBackend.Services.Implementations
 
         private async Task<List<KDomModerationDto>> GetPendingKDomsForModerationAsync()
         {
+            Console.WriteLine("[DEBUG] ModerationService - GetPendingKDomsForModerationAsync called");
+
             var pendingKDoms = await _kdomRepository.GetPendingKdomsAsync();
+            Console.WriteLine($"[DEBUG] ModerationService - Repository returned {pendingKDoms.Count} pending K-DOMs");
+
             var result = new List<KDomModerationDto>();
 
             foreach (var kdom in pendingKDoms)
             {
+                Console.WriteLine($"[DEBUG] Processing K-DOM: {kdom.Title}");
+
                 var authorUsername = await _userService.GetUsernameByUserIdAsync(kdom.UserId);
                 var priority = await CalculateKDomPriorityAsync(kdom.Id);
 
@@ -460,20 +474,19 @@ namespace KDomBackend.Services.Implementations
                     Hub = kdom.Hub,
                     Language = kdom.Language,
                     IsForKids = kdom.IsForKids,
-                    Theme = kdom.Theme,
+                    Theme = kdom.Theme,  
                     AuthorUsername = authorUsername,
                     AuthorId = kdom.UserId,
                     CreatedAt = kdom.CreatedAt,
                     ParentId = kdom.ParentId,
                     ParentTitle = parentTitle,
-                    Priority = priority
+                    Priority = priority,
+                    Status = kdom.Status ?? "Pending"
                 });
             }
 
-            // Sortează după prioritate și apoi după data creării
-            return result.OrderByDescending(k => k.Priority)
-                        .ThenBy(k => k.CreatedAt)
-                        .ToList();
+            Console.WriteLine($"[DEBUG] ModerationService - Processed {result.Count} K-DOMs for moderation view");
+            return result.OrderByDescending(k => k.Priority).ThenBy(k => k.CreatedAt).ToList();
         }
 
         private async Task<List<ModeratorActivityDto>> GetModeratorActivityAsync(int days, int limit = 10)

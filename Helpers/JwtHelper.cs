@@ -1,4 +1,5 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+﻿// Helpers/JwtHelper.cs
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using KDomBackend.Models.Entities;
@@ -22,13 +23,24 @@ namespace KDomBackend.Helpers
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.SecretKey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+            // IMPORTANT: Use the actual role name, not the RoleId
+            var roleName = user.Role ?? "user"; // Use the Role property directly
+
             var claims = new[]
             {
-        new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()), 
-        new Claim(ClaimTypes.Name, user.Username),
-        new Claim(ClaimTypes.Role, user.RoleId.ToString()),
-        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()) 
-    };
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.Username),
+                new Claim(ClaimTypes.Role, roleName), // Use role name instead of RoleId
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim("username", user.Username), // Add explicit username claim
+                new Claim("role", roleName) // Add explicit role claim for frontend
+            };
+
+            Console.WriteLine($"[DEBUG] JwtHelper - Generated claims for user {user.Username}:");
+            foreach (var claim in claims)
+            {
+                Console.WriteLine($"  {claim.Type}: {claim.Value}");
+            }
 
             var token = new JwtSecurityToken(
                 issuer: _settings.Issuer,
@@ -38,8 +50,10 @@ namespace KDomBackend.Helpers
                 signingCredentials: creds
             );
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
+            var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+            Console.WriteLine($"[DEBUG] JwtHelper - Generated token: {tokenString}");
 
+            return tokenString;
+        }
     }
 }

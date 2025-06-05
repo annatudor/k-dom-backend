@@ -36,8 +36,10 @@ namespace KDomBackend.Repositories.Interfaces
         Task<Dictionary<string, int>> GetUserActivityByMonthAsync(int userId, int months = 12);
         Task<List<string>> GetUserRecentActionsAsync(int userId, int limit = 10);
 
-        Task UpdateLastLoginAsync(int userId);
+        Task UpdateLastLoginAsync(int userId, DateTime loginTime);
         Task<DateTime?> GetLastLoginAsync(int userId);
+
+        Task<User?> GetByUsernameOrEmailAsync(string identifier);
 
 
     }
