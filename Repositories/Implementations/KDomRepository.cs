@@ -453,5 +453,124 @@ namespace KDomBackend.Repositories.Implementations
             return (int)await _context.KDomEdits
                 .CountDocumentsAsync(e => e.KDomId == kdomId && e.UserId == userId);
         }
+
+        // moderation tasks
+
+        public async Task DeleteAsync(string kdomId)
+        {
+            await _collection.DeleteOneAsync(k => k.Id == kdomId);
+        }
+
+        public async Task<List<KDom>> GetKDomsByStatusAsync(bool isApproved, bool isRejected)
+        {
+            var filter = Builders<KDom>.Filter.And(
+                Builders<KDom>.Filter.Eq(k => k.IsApproved, isApproved),
+                Builders<KDom>.Filter.Eq(k => k.IsRejected, isRejected)
+            );
+
+            return await _collection.Find(filter)
+                .SortByDescending(k => k.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<List<KDom>> GetUserKDomsWithStatusAsync(int userId)
+        {
+            var filter = Builders<KDom>.Filter.Eq(k => k.UserId, userId);
+
+            return await _collection.Find(filter)
+                .SortByDescending(k => k.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<int> GetPendingCountAsync()
+        {
+            var filter = Builders<KDom>.Filter.And(
+                Builders<KDom>.Filter.Eq(k => k.IsApproved, false),
+                Builders<KDom>.Filter.Eq(k => k.IsRejected, false)
+            );
+
+            return (int)await _collection.CountDocumentsAsync(filter);
+        }
+
+        public async Task<int> GetApprovedCountAsync(DateTime? fromDate = null)
+        {
+            var filter = Builders<KDom>.Filter.Eq(k => k.IsApproved, true);
+
+            if (fromDate.HasValue)
+            {
+                filter = Builders<KDom>.Filter.And(
+                    filter,
+                    Builders<KDom>.Filter.Gte(k => k.UpdatedAt, fromDate.Value)
+                );
+            }
+
+            return (int)await _collection.CountDocumentsAsync(filter);
+        }
+
+        public async Task<int> GetRejectedCountAsync(DateTime? fromDate = null)
+        {
+            var filter = Builders<KDom>.Filter.Eq(k => k.IsRejected, true);
+
+            if (fromDate.HasValue)
+            {
+                filter = Builders<KDom>.Filter.And(
+                    filter,
+                    Builders<KDom>.Filter.Gte(k => k.UpdatedAt, fromDate.Value)
+                );
+            }
+
+            return (int)await _collection.CountDocumentsAsync(filter);
+        }
+
+        public async Task<List<KDom>> GetRecentlyModeratedAsync(int limit = 10)
+        {
+            var filter = Builders<KDom>.Filter.Or(
+                Builders<KDom>.Filter.Eq(k => k.IsApproved, true),
+                Builders<KDom>.Filter.Eq(k => k.IsRejected, true)
+            );
+
+            return await _collection.Find(filter)
+                .SortByDescending(k => k.UpdatedAt)
+                .Limit(limit)
+                .ToListAsync();
+        }
+
+    
+
+        public async Task<TimeSpan> GetAverageProcessingTimeAsync()
+        {
+            var pipeline = new[]
+            {
+        new BsonDocument("$match", new BsonDocument("$or", new BsonArray
+        {
+            new BsonDocument("isApproved", true),
+            new BsonDocument("isRejected", true)
+        })),
+        new BsonDocument("$addFields", new BsonDocument("processingTime",
+            new BsonDocument("$subtract", new BsonArray { "$updatedAt", "$createdAt" }))),
+        new BsonDocument("$group", new BsonDocument
+        {
+            { "_id", BsonNull.Value },
+            { "avgProcessingTime", new BsonDocument("$avg", "$processingTime") }
+        })
+    };
+
+            var cursor = await _collection.AggregateAsync<BsonDocument>(pipeline);
+            var result = await cursor.FirstOrDefaultAsync();
+
+            if (result != null && result["avgProcessingTime"] != BsonNull.Value)
+            {
+                var avgMilliseconds = result["avgProcessingTime"].AsDouble;
+                return TimeSpan.FromMilliseconds(avgMilliseconds);
+            }
+
+            return TimeSpan.Zero;
+        }
+
+        public async Task<DateTime?> GetModerationDateAsync(string kdomId)
+        {
+            var kdom = await _collection.Find(k => k.Id == kdomId).FirstOrDefaultAsync();
+            return kdom?.UpdatedAt;
+        }
     }
 }

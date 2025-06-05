@@ -332,42 +332,6 @@ namespace KDomBackend.Controllers
             }
         }
 
-        [Authorize(Roles = "admin,moderator")]
-        [HttpPost("{id}/approve")]
-        public async Task<IActionResult> Approve(string id)
-        {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-            try
-            {
-                await _kdomFlowService.ApproveKdomAsync(id, userId);
-                return Ok(new { message = "K-Dom approved." });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-        }
-
-        [Authorize(Roles = "admin,moderator")]
-        [HttpPost("{id}/reject")]
-        public async Task<IActionResult> Reject(string id, [FromBody] KDomRejectDto dto)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-            try
-            {
-                await _kdomFlowService.RejectKdomAsync(id, dto, userId);
-                return Ok(new { message = "K-Dom rejected." });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-        }
 
         #endregion
 
@@ -837,93 +801,6 @@ namespace KDomBackend.Controllers
             }
         }
 
-        /// <summary>
-        /// Bulk approve multiple K-Doms (Admin only)
-        /// </summary>
-        [Authorize(Roles = "admin,moderator")]
-        [HttpPost("bulk-approve")]
-        public async Task<IActionResult> BulkApprove([FromBody] BulkOperationDto dto)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            try
-            {
-                var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-                var successCount = 0;
-                var errors = new List<string>();
-
-                foreach (var kdomId in dto.KDomIds)
-                {
-                    try
-                    {
-                        await _kdomFlowService.ApproveKdomAsync(kdomId, userId);
-                        successCount++;
-                    }
-                    catch (Exception ex)
-                    {
-                        errors.Add($"Failed to approve {kdomId}: {ex.Message}");
-                    }
-                }
-
-                return Ok(new
-                {
-                    message = $"Bulk operation completed. {successCount}/{dto.KDomIds.Count} K-Doms approved.",
-                    successCount,
-                    totalCount = dto.KDomIds.Count,
-                    errors = errors.Any() ? errors : null
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-        }
-
-        /// <summary>
-        /// Bulk reject multiple K-Doms (Admin only)
-        /// </summary>
-        [Authorize(Roles = "admin,moderator")]
-        [HttpPost("bulk-reject")]
-        public async Task<IActionResult> BulkReject([FromBody] BulkRejectDto dto)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            try
-            {
-                var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-                var successCount = 0;
-                var errors = new List<string>();
-
-                var rejectDto = new KDomRejectDto { Reason = dto.Reason };
-
-                foreach (var kdomId in dto.KDomIds)
-                {
-                    try
-                    {
-                        await _kdomFlowService.RejectKdomAsync(kdomId, rejectDto, userId);
-                        successCount++;
-                    }
-                    catch (Exception ex)
-                    {
-                        errors.Add($"Failed to reject {kdomId}: {ex.Message}");
-                    }
-                }
-
-                return Ok(new
-                {
-                    message = $"Bulk operation completed. {successCount}/{dto.KDomIds.Count} K-Doms rejected.",
-                    successCount,
-                    totalCount = dto.KDomIds.Count,
-                    errors = errors.Any() ? errors : null
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-        }
 
         /// <summary>
         /// Obține sugestii de K-Dom-uri similare pe baza unui titlu

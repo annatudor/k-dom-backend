@@ -18,7 +18,14 @@
         ChangeRole,
         ApproveCollaboration,
         RejectCollaboration,
-        RemoveCollaborator
+        RemoveCollaborator,
+        DeleteKDom,                    
+        BulkApproveKDom,             
+        BulkRejectKDom,               
+        ForceDeleteKDom,              
+        ViewModerationDashboard,       
+        ViewUserModerationHistory,     
+        ResubmitKDom
 
     }
 }

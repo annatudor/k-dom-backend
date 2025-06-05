@@ -60,5 +60,85 @@ namespace KDomBackend.Repositories.Implementations
                 Action = action.ToString()
             });
         }
+
+        public async Task<List<AuditLog>> GetModerationActionsAsync(int limit = 50)
+        {
+            using var conn = _context.CreateConnection();
+            const string sql = @"
+        SELECT * FROM audit_log 
+        WHERE action IN ('ApproveKDom', 'RejectKDom')
+        ORDER BY created_at DESC 
+        LIMIT @Limit";
+
+            var result = await conn.QueryAsync<AuditLog>(sql, new { Limit = limit });
+            return result.ToList();
+        }
+
+        public async Task<List<AuditLog>> GetModerationActionsByModeratorAsync(int moderatorId, DateTime? fromDate = null)
+        {
+            using var conn = _context.CreateConnection();
+            var sql = @"
+        SELECT * FROM audit_log 
+        WHERE user_id = @ModeratorId 
+        AND action IN ('ApproveKDom', 'RejectKDom')";
+
+            if (fromDate.HasValue)
+            {
+                sql += " AND created_at >= @FromDate";
+            }
+
+            sql += " ORDER BY created_at DESC";
+
+            var result = await conn.QueryAsync<AuditLog>(sql, new
+            {
+                ModeratorId = moderatorId,
+                FromDate = fromDate
+            });
+            return result.ToList();
+        }
+
+        public async Task<List<AuditLog>> GetModerationActionsForKDomAsync(string kdomId)
+        {
+            using var conn = _context.CreateConnection();
+            const string sql = @"
+        SELECT * FROM audit_log 
+        WHERE target_id = @KDomId 
+        AND action IN ('ApproveKDom', 'RejectKDom')
+        ORDER BY created_at DESC";
+
+            var result = await conn.QueryAsync<AuditLog>(sql, new { KDomId = kdomId });
+            return result.ToList();
+        }
+
+        public async Task<Dictionary<int, int>> GetModeratorStatsAsync(DateTime fromDate)
+        {
+            using var conn = _context.CreateConnection();
+            const string sql = @"
+        SELECT user_id, COUNT(*) as action_count
+        FROM audit_log 
+        WHERE action IN ('ApproveKDom', 'RejectKDom')
+        AND created_at >= @FromDate
+        AND user_id IS NOT NULL
+        GROUP BY user_id";
+
+            var result = await conn.QueryAsync<dynamic>(sql, new { FromDate = fromDate });
+            return result.ToDictionary(
+                r => (int)r.user_id,
+                r => (int)r.action_count
+            );
+        }
+
+        public async Task<AuditLog?> GetLastModerationActionAsync(string kdomId)
+        {
+            using var conn = _context.CreateConnection();
+            const string sql = @"
+        SELECT * FROM audit_log 
+        WHERE target_id = @KDomId 
+        AND action IN ('ApproveKDom', 'RejectKDom')
+        ORDER BY created_at DESC 
+        LIMIT 1";
+
+            return await conn.QueryFirstOrDefaultAsync<AuditLog>(sql, new { KDomId = kdomId });
+        }
     }
 }

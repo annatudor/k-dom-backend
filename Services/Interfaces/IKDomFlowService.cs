@@ -10,8 +10,6 @@ namespace KDomBackend.Services.Interfaces
         Task<bool> EditKDomAsync(KDomEditDto dto, int userId);
         Task<bool> EditKDomBySlugAsync(KDomEditDto dto, int userId);
 
-        Task ApproveKdomAsync(string kdomId, int moderatorId);
-        Task RejectKdomAsync(string kdomId, KDomRejectDto dto, int moderatorId);
         Task RemoveCollaboratorAsync(string kdomId, int requesterId, int userIdToRemove);
 
 

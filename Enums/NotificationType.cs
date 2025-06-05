@@ -12,6 +12,11 @@
         MentionInPost,
         NewFollower,
         SystemMessage,
+        KDomDeleted,
+        KDomForceDeleted,
+        BulkModerationCompleted,
+        ModerationReminder,
+        KDomResubmitted
         
     }
 }

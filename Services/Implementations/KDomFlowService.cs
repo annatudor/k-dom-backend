@@ -17,7 +17,7 @@ namespace KDomBackend.Services.Implementations
         private readonly IAuditLogRepository _auditLogRepository;
         private readonly INotificationService _notificationService;
         private readonly IUserRepository _userRepository;
-        private readonly IKDomPermissionService _permissionService; // NEW: Inject permission service
+        private readonly IKDomPermissionService _permissionService; 
         private readonly KDomValidator _validator;
         private readonly KDomMetadataValidator _metadataValidator;
         private readonly ILogger<KDomFlowService> _logger;
@@ -28,7 +28,7 @@ namespace KDomBackend.Services.Implementations
             IAuditLogRepository auditLogRepository,
             INotificationService notificationService,
             IUserRepository userRepository,
-            IKDomPermissionService permissionService, // NEW: Add permission service
+            IKDomPermissionService permissionService, 
             KDomValidator validator,
             KDomMetadataValidator metadataValidator,
             IPostRepository postRepository,
@@ -42,7 +42,7 @@ namespace KDomBackend.Services.Implementations
             _auditLogRepository = auditLogRepository;
             _notificationService = notificationService;
             _userRepository = userRepository;
-            _permissionService = permissionService; // NEW: Assign permission service
+            _permissionService = permissionService; 
             _validator = validator;
             _metadataValidator = metadataValidator;
             _logger = logger;
@@ -311,61 +311,7 @@ namespace KDomBackend.Services.Implementations
             }
         }
 
-        public async Task ApproveKdomAsync(string kdomId, int moderatorId)
-        {
-            await _kdomRepository.ApproveAsync(kdomId);
-
-            await _auditLogRepository.CreateAsync(new AuditLog
-            {
-                UserId = moderatorId,
-                Action = AuditAction.ApproveKDom,
-                TargetType = AuditTargetType.KDom,
-                TargetId = kdomId,
-                CreatedAt = DateTime.UtcNow
-            });
-
-            var kdom = await _kdomRepository.GetByIdAsync(kdomId);
-            if (kdom == null) throw new Exception("K-Dom not found.");
-
-            await _notificationService.CreateNotificationAsync(new NotificationCreateDto
-            {
-                UserId = kdom.UserId,
-                Type = NotificationType.KDomApproved,
-                Message = $"Your K-dom \"{kdom.Title}\" has been approved.",
-                TriggeredByUserId = moderatorId,
-                TargetType = ContentType.KDom,
-                TargetId = kdomId
-            });
-        }
-
-        public async Task RejectKdomAsync(string kdomId, KDomRejectDto dto, int moderatorId)
-        {
-            await _kdomRepository.RejectAsync(kdomId, dto.Reason);
-
-            await _auditLogRepository.CreateAsync(new AuditLog
-            {
-                UserId = moderatorId,
-                Action = AuditAction.RejectKDom,
-                TargetType = AuditTargetType.KDom,
-                TargetId = kdomId,
-                CreatedAt = DateTime.UtcNow,
-                Details = dto.Reason
-            });
-
-            var kdom = await _kdomRepository.GetByIdAsync(kdomId);
-            if (kdom == null) throw new Exception("K-Dom not found.");
-
-            await _notificationService.CreateNotificationAsync(new NotificationCreateDto
-            {
-                UserId = kdom.UserId,
-                Type = NotificationType.KDomRejected,
-                Message = $"Your K-dom \"{kdom.Title}\" has been rejected. Reason: {dto.Reason}",
-                TriggeredByUserId = moderatorId,
-                TargetType = ContentType.KDom,
-                TargetId = kdomId
-            });
-        }
-
+       
         public async Task RemoveCollaboratorAsync(string kdomId, int requesterId, int userIdToRemove)
         {
             var kdom = await _kdomRepository.GetByIdAsync(kdomId);
