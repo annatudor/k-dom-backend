@@ -26,7 +26,7 @@ namespace KDomBackend.Models.MongoEntities
         public bool IsForKids { get; set; } = false;
         [BsonRepresentation(BsonType.String)]
         public KDomTheme Theme { get; set; } = KDomTheme.Light;
-        public string Status { get; set; } = "pending";
+        public string Status { get; set; } = "Pending";
         public string ContentHtml { get; set; } = string.Empty;
         public int UserId { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

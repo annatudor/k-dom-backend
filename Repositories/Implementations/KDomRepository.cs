@@ -102,11 +102,7 @@ namespace KDomBackend.Repositories.Implementations
 
         public async Task<List<KDom>> GetPendingKdomsAsync()
         {
-            var filter = Builders<KDom>.Filter.And(
-                Builders<KDom>.Filter.Eq(k => k.IsApproved, false),
-                Builders<KDom>.Filter.Eq(k => k.IsRejected, false)
-            );
-
+            var filter = Builders<KDom>.Filter.Eq(k => k.Status, "Pending");
             return await _collection.Find(filter).SortBy(k => k.CreatedAt).ToListAsync();
         }
 
