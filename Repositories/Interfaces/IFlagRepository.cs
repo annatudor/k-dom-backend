@@ -8,6 +8,7 @@ namespace KDomBackend.Repositories.Interfaces
         Task<List<Flag>> GetAllAsync();
         Task MarkResolvedAsync(int id);
         Task DeleteAsync(int id);
+        Task<Flag?> GetFlagByIdAsync(int id);
 
     }
 }

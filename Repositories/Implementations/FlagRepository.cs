@@ -43,5 +43,11 @@ public class FlagRepository : IFlagRepository
         const string sql = "DELETE FROM flags WHERE id = @id";
         await conn.ExecuteAsync(sql, new { id });
     }
+    public async Task<Flag?> GetFlagByIdAsync(int id)
+    {
+        using var conn = _context.CreateConnection();
+        const string sql = "SELECT * FROM flags WHERE id = @id";
+        return await conn.QueryFirstOrDefaultAsync<Flag>(sql, new { id });
+    }
 
 }

@@ -4,6 +4,7 @@ using System.Security.Claims;
 using KDomBackend.Models.DTOs.Flag;
 using KDomBackend.Services.Interfaces;
 using KDomBackend.Enums;
+using System.ComponentModel.DataAnnotations;
 
 [ApiController]
 [Route("api/flags")]
@@ -28,10 +29,7 @@ public class FlagController : ControllerBase
         try
         {
             await _flagService.CreateFlagAsync(userId, dto);
-
-            // Return content-specific success messages
             var message = GetSuccessMessage(dto.ContentType);
-
             return Ok(new { message });
         }
         catch (Exception ex)
@@ -40,31 +38,128 @@ public class FlagController : ControllerBase
         }
     }
 
+    // ✅ ENHANCED: Acum returnează conținutul flagged pentru review
     [Authorize(Roles = "admin,moderator")]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var flags = await _flagService.GetAllAsync();
-        return Ok(flags);
+        try
+        {
+            var flags = await _flagService.GetAllAsync();
+            var pendingFlags = flags.Where(f => !f.IsResolved).ToList();
+            var resolvedFlags = flags.Where(f => f.IsResolved).ToList();
+
+            return Ok(new
+            {
+                pending = pendingFlags,
+                resolved = resolvedFlags,
+                summary = new
+                {
+                    totalPending = pendingFlags.Count,
+                    totalResolved = resolvedFlags.Count,
+                    total = flags.Count
+                },
+                message = pendingFlags.Any()
+                    ? $"You have {pendingFlags.Count} pending flag(s) to review"
+                    : "No pending flags to review"
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
+    // ✅ NEW: Endpoint pentru a rezolva flag-ul (conținutul e ok)
     [Authorize(Roles = "admin,moderator")]
     [HttpPost("{id}/resolve")]
     public async Task<IActionResult> Resolve(int id)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        await _flagService.ResolveAsync(id, userId);
-        return Ok(new { message = "Report marked as resolved." });
+        try
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            await _flagService.ResolveAsync(id, userId);
+            return Ok(new
+            {
+                message = "Flag resolved. Content remains available.",
+                action = "resolved"
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
+    // ✅ NEW: Endpoint pentru a șterge conținutul flagged
+    [Authorize(Roles = "admin,moderator")]
+    [HttpPost("{id}/remove-content")]
+    public async Task<IActionResult> RemoveContent(int id, [FromBody] ContentRemovalDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        try
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            await _flagService.DeleteFlaggedContentAsync(id, userId, dto.Reason);
+
+            return Ok(new
+            {
+                message = "Flagged content has been removed and author notified.",
+                action = "content_removed"
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    // ✅ KEPT: Admin poate șterge flag-ul în sine
     [Authorize(Roles = "admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        await _flagService.DeleteAsync(id, userId);
+        try
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            await _flagService.DeleteAsync(id, userId);
+            return Ok(new { message = "Flag deleted." });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
 
-        return Ok(new { message = "Report deleted." });
+    // ✅ NEW: Statistici pentru dashboard
+    [Authorize(Roles = "admin,moderator")]
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats()
+    {
+        try
+        {
+            var allFlags = await _flagService.GetAllAsync();
+            var pendingCount = allFlags.Count(f => !f.IsResolved);
+            var todayFlags = allFlags.Count(f => f.CreatedAt.Date == DateTime.Today);
+
+            var flagsByType = allFlags.GroupBy(f => f.ContentType.ToString())
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            return Ok(new
+            {
+                totalPending = pendingCount,
+                totalToday = todayFlags,
+                totalAllTime = allFlags.Count,
+                flagsByContentType = flagsByType,
+                requiresAttention = pendingCount > 0
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     private static string GetSuccessMessage(ContentType contentType)
@@ -78,3 +173,5 @@ public class FlagController : ControllerBase
         };
     }
 }
+
+
