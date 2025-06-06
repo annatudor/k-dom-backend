@@ -148,5 +148,36 @@ namespace KDomBackend.Controllers
             }
         }
 
+        // În Controllers/UserAdminController.cs
+        [HttpGet("search")]
+        public async Task<IActionResult> QuickSearchUsers([FromQuery] string query, [FromQuery] int limit = 10)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return BadRequest(new { error = "Query parameter is required." });
+
+            try
+            {
+                var users = await _userAdminService.QuickSearchUsersAsync(query, limit);
+
+                return Ok(new
+                {
+                    query,
+                    results = users,
+                    count = users.Count,
+                    message = users.Any()
+                        ? $"Found {users.Count} user(s) matching '{query}'"
+                        : $"No users found matching '{query}'"
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
     }
 }

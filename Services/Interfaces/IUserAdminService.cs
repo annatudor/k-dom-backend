@@ -8,6 +8,6 @@ namespace KDomBackend.Services.Interfaces
     {
         Task ChangeUserRoleAsync(int targetUserId, string newRole, int adminUserId);
         Task<PagedResult<UserPublicDto>> GetAllPaginatedAsync(UserFilterDto filter);
-        
+        Task<List<UserPublicDto>> QuickSearchUsersAsync(string query, int limit = 10);
     }
 }

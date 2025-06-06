@@ -40,6 +40,9 @@ namespace KDomBackend.Services.Implementations
             if (targetUser == null)
                 throw new Exception("User does not exist.");
 
+            if (targetUserId == adminUserId)
+                throw new Exception("You cannot change your own role.");
+
             await _userRepository.UpdateRoleAsync(targetUserId, newRole.ToLower());
 
             await _auditLogRepository.CreateAsync(new AuditLog
@@ -49,7 +52,7 @@ namespace KDomBackend.Services.Implementations
                 TargetType = AuditTargetType.User,
                 TargetId = targetUserId.ToString(),
                 CreatedAt = DateTime.UtcNow,
-                Details = $"Role changed in '{newRole}'"
+                Details = $"Role changed to '{newRole}'"
             });
 
         }
@@ -82,6 +85,42 @@ namespace KDomBackend.Services.Implementations
         public async Task<User?> GetUserByUsernameAsync(string username)
         {
             return await _userRepository.GetByUsernameAsync(username);
+        }
+
+
+        // În Services/Implementations/UserAdminService.cs
+        public async Task<List<UserPublicDto>> QuickSearchUsersAsync(string query, int limit = 10)
+        {
+            if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
+                throw new ArgumentException("Query must be at least 2 characters long.");
+
+            if (limit > 50) // Limitare pentru performanță
+                limit = 50;
+
+            // Folosește repository-ul existent, dar transformă datele
+            var users = await _userRepository.SearchUsersAsync(query);
+
+            // Ia doar numărul limitat și transformă în DTO-ul potrivit
+            var limitedUsers = users.Take(limit);
+
+            var result = new List<UserPublicDto>();
+
+            foreach (var user in limitedUsers)
+            {
+                // Pentru că SearchUsersAsync nu returnează rolul, îl obținem separat
+                var fullUser = await _userRepository.GetByIdAsync(user.Id);
+
+                result.Add(new UserPublicDto
+                {
+                    Id = user.Id,
+                    Username = user.Username,
+                    Email = user.Email ?? "", // Din SearchUsersAsync s-ar putea să nu avem email
+                    Role = fullUser?.Role ?? "user",
+                    CreatedAt = fullUser?.CreatedAt ?? DateTime.MinValue,
+                });
+            }
+
+            return result.OrderBy(u => u.Username).ToList();
         }
 
     }
