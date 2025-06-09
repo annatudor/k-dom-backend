@@ -175,28 +175,137 @@ namespace KDomBackend.Services.Implementations
             };
         }
 
-       
+
         public async Task<UserDetailedStatsDto> GetUserDetailedStatsAsync(int userId, int requesterId)
         {
-            if (!await IsUserAdminAsync(requesterId))
+            try
             {
-                throw new UnauthorizedAccessException("Admin access required.");
-            }
+                // Only admin can view detailed stats
+                if (!await IsUserAdminAsync(requesterId))
+                {
+                    throw new UnauthorizedAccessException("Admin access required.");
+                }
 
-            return new UserDetailedStatsDto
+                // Get user to ensure they exist
+                var user = await _userRepository.GetByIdAsync(userId);
+                if (user == null)
+                {
+                    throw new Exception("User not found.");
+                }
+
+                Console.WriteLine($"[DEBUG] Getting detailed stats for user {userId}");
+
+                // Initialize with safe defaults
+                var stats = new UserDetailedStatsDto
+                {
+                    TotalKDomViews = 0,
+                    TotalKDomEdits = 0,
+                    TotalLikesReceived = 0,
+                    TotalLikesGiven = 0,
+                    TotalCommentsReceived = 0,
+                    TotalFlagsReceived = 0,
+                    ActivityByMonth = new Dictionary<string, int>(),
+                    RecentActions = new List<string>()
+                };
+
+                // Safely get each statistic with try-catch
+                try
+                {
+                    if (_viewTrackingService != null)
+                    {
+                        stats.TotalKDomViews = await _viewTrackingService.GetUserTotalViewsAsync(userId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[WARNING] Failed to get view stats: {ex.Message}");
+                    stats.TotalKDomViews = 0;
+                }
+
+                try
+                {
+                    stats.TotalKDomEdits = await _kdomRepository.GetUserKDomEditsCountAsync(userId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[WARNING] Failed to get edit stats: {ex.Message}");
+                    stats.TotalKDomEdits = 0;
+                }
+
+                try
+                {
+                    stats.TotalLikesReceived = await GetUserLikesReceivedAsync(userId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[WARNING] Failed to get likes received: {ex.Message}");
+                    stats.TotalLikesReceived = 0;
+                }
+
+                try
+                {
+                    stats.TotalLikesGiven = await GetUserLikesGivenAsync(userId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[WARNING] Failed to get likes given: {ex.Message}");
+                    stats.TotalLikesGiven = 0;
+                }
+
+                try
+                {
+                    stats.TotalCommentsReceived = await GetUserCommentsReceivedAsync(userId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[WARNING] Failed to get comments received: {ex.Message}");
+                    stats.TotalCommentsReceived = 0;
+                }
+
+                try
+                {
+                    stats.TotalFlagsReceived = await _userRepository.GetUserFlagsReceivedAsync(userId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[WARNING] Failed to get flags received: {ex.Message}");
+                    stats.TotalFlagsReceived = 0;
+                }
+
+                try
+                {
+                    var activityByMonth = await _userRepository.GetUserActivityByMonthAsync(userId);
+                    stats.ActivityByMonth = activityByMonth ?? new Dictionary<string, int>();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[WARNING] Failed to get activity by month: {ex.Message}");
+                    stats.ActivityByMonth = new Dictionary<string, int>();
+                }
+
+                try
+                {
+                    var recentActions = await _userRepository.GetUserRecentActionsAsync(userId);
+                    stats.RecentActions = recentActions ?? new List<string>();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[WARNING] Failed to get recent actions: {ex.Message}");
+                    stats.RecentActions = new List<string>();
+                }
+
+                Console.WriteLine($"[DEBUG] Successfully built detailed stats for user {userId}");
+                return stats;
+            }
+            catch (Exception ex)
             {
-                TotalKDomViews = await _viewTrackingService.GetUserTotalViewsAsync(userId),
-                TotalKDomEdits = await _kdomRepository.GetUserKDomEditsCountAsync(userId),
-                TotalLikesReceived = await GetUserLikesReceivedAsync(userId),
-                TotalLikesGiven = await GetUserLikesGivenAsync(userId),
-                TotalCommentsReceived = await GetUserCommentsReceivedAsync(userId),
-                TotalFlagsReceived = await _userRepository.GetUserFlagsReceivedAsync(userId),
-                ActivityByMonth = await _userRepository.GetUserActivityByMonthAsync(userId),
-                RecentActions = await _userRepository.GetUserRecentActionsAsync(userId)
-            };
+                Console.WriteLine($"[ERROR] GetUserDetailedStatsAsync failed: {ex.Message}");
+                Console.WriteLine($"[ERROR] Stack trace: {ex.StackTrace}");
+                throw;
+            }
         }
 
-       
+
         public async Task<bool> IsUserAdminAsync(int userId)
         {
             if (userId <= 0) return false;
@@ -292,46 +401,64 @@ namespace KDomBackend.Services.Implementations
 
         public async Task UpdateProfileAsync(int userId, UserProfileUpdateDto dto)
         {
-          
-            var user = await _userRepository.GetByIdAsync(userId);
-            if (user == null)
-                throw new Exception("User not found.");
-
-           
-            if (!string.IsNullOrEmpty(dto.Nickname) && dto.Nickname.Length > 50)
-                throw new Exception("Nickname cannot exceed 50 characters.");
-
-            if (!string.IsNullOrEmpty(dto.Bio) && dto.Bio.Length > 500)
-                throw new Exception("Bio cannot exceed 500 characters.");
-
-            if (!string.IsNullOrEmpty(dto.AvatarUrl) && !Uri.IsWellFormedUriString(dto.AvatarUrl, UriKind.Absolute))
-                throw new Exception("Avatar URL must be a valid URL.");
-
-            
-            var profile = await _profileRepository.GetProfileByUserIdAsync(userId);
-
-            if (profile == null)
+            try
             {
-                profile = new UserProfile
+                Console.WriteLine($"[DEBUG] UpdateProfileAsync called for user {userId}");
+                Console.WriteLine($"[DEBUG] DTO: Nickname='{dto.Nickname}', Bio='{dto.Bio}', Theme={dto.ProfileTheme}, AvatarUrl='{dto.AvatarUrl}'");
+
+                // Get user to ensure they exist
+                var user = await _userRepository.GetByIdAsync(userId);
+                if (user == null)
+                    throw new Exception("User not found.");
+
+                // Validate inputs with null safety
+                if (!string.IsNullOrEmpty(dto.Nickname) && dto.Nickname.Length > 50)
+                    throw new Exception("Nickname cannot exceed 50 characters.");
+
+                if (!string.IsNullOrEmpty(dto.Bio) && dto.Bio.Length > 500)
+                    throw new Exception("Bio cannot exceed 500 characters.");
+
+                // FIXED: Only validate URL if it's not null or empty
+                if (!string.IsNullOrEmpty(dto.AvatarUrl) && !IsValidUrl(dto.AvatarUrl))
+                    throw new Exception("Avatar URL must be a valid URL.");
+
+                // Get existing profile
+                var profile = await _profileRepository.GetProfileByUserIdAsync(userId);
+
+                if (profile == null)
                 {
-                    UserId = userId,
-                    Nickname = dto.Nickname ?? "",
-                    Bio = dto.Bio ?? "",
-                    ProfileTheme = dto.ProfileTheme,
-                    AvatarUrl = dto.AvatarUrl ?? "",
-                    JoinedAt = DateTime.UtcNow
-                };
+                    // Create new profile
+                    profile = new UserProfile
+                    {
+                        UserId = userId,
+                        Nickname = dto.Nickname ?? "",
+                        Bio = dto.Bio ?? "",
+                        ProfileTheme = dto.ProfileTheme,
+                        AvatarUrl = dto.AvatarUrl ?? "",
+                        JoinedAt = DateTime.UtcNow,
+                        RecentlyViewedKDomIds = new List<string>()
+                    };
 
-                await _profileRepository.CreateAsync(profile);
+                    await _profileRepository.CreateAsync(profile);
+                    Console.WriteLine($"[DEBUG] Created new profile for user {userId}");
+                }
+                else
+                {
+                    // Update existing profile with null-safe assignments
+                    profile.Nickname = dto.Nickname ?? profile.Nickname ?? "";
+                    profile.Bio = dto.Bio ?? profile.Bio ?? "";
+                    profile.ProfileTheme = dto.ProfileTheme;
+                    profile.AvatarUrl = dto.AvatarUrl ?? profile.AvatarUrl ?? "";
+
+                    await _profileRepository.UpdateAsync(profile);
+                    Console.WriteLine($"[DEBUG] Updated existing profile for user {userId}");
+                }
             }
-            else
+            catch (Exception ex)
             {
-                profile.Nickname = dto.Nickname ?? profile.Nickname;
-                profile.Bio = dto.Bio ?? profile.Bio;
-                profile.ProfileTheme = dto.ProfileTheme;
-                profile.AvatarUrl = dto.AvatarUrl ?? profile.AvatarUrl;
-
-                await _profileRepository.UpdateAsync(profile);
+                Console.WriteLine($"[ERROR] UpdateProfileAsync failed: {ex.Message}");
+                Console.WriteLine($"[ERROR] Stack trace: {ex.StackTrace}");
+                throw;
             }
         }
 
@@ -361,5 +488,15 @@ namespace KDomBackend.Services.Implementations
                 throw new UnauthorizedAccessException("You don't have permission to update this profile.");
             }
         }
+
+        private static bool IsValidUrl(string url)
+        {
+            if (string.IsNullOrEmpty(url))
+                return true; // Empty URLs are valid (will be handled as no avatar)
+
+            return Uri.TryCreate(url, UriKind.Absolute, out var result) &&
+                   (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
+        }
+
     }
 }

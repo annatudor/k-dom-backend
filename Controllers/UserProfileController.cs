@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿// Controllers/UserProfileController.cs - FIXED VERSION
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using KDomBackend.Services.Interfaces;
@@ -24,8 +25,7 @@ namespace KDomBackend.Controllers
         }
 
         /// <summary>
-        /// Obține profilul utilizatorului curent (din JWT token)
-        /// Folosește GetEnhancedUserProfileAsync cu viewerId pentru a include date private
+        /// Obține profilul utilizatorului curent (din JWT token) - FIXED VERSION
         /// </summary>
         [HttpGet("my-profile")]
         public async Task<IActionResult> GetMyProfile()
@@ -33,18 +33,18 @@ namespace KDomBackend.Controllers
             try
             {
                 var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-                // Folosește metoda enhanced cu viewerId pentru a include toate datele private
                 var profile = await _userProfileService.GetUserProfileAsync(userId, userId);
                 return Ok(profile);
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[ERROR] GetMyProfile: {ex.Message}");
                 return NotFound(new { error = ex.Message });
             }
         }
 
         /// <summary>
-        /// Actualizează profilul utilizatorului curent
+        /// Actualizează profilul utilizatorului curent - FIXED VERSION
         /// </summary>
         [HttpPut("edit-profile")]
         public async Task<IActionResult> UpdateMyProfile([FromBody] UserProfileUpdateDto dto)
@@ -60,6 +60,7 @@ namespace KDomBackend.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[ERROR] UpdateMyProfile: {ex.Message}");
                 return BadRequest(new { error = ex.Message });
             }
         }
@@ -88,6 +89,7 @@ namespace KDomBackend.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[ERROR] GetRecentlyViewedKdoms: {ex.Message}");
                 return BadRequest(new { error = ex.Message });
             }
         }
@@ -106,13 +108,13 @@ namespace KDomBackend.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[ERROR] GetMyKdoms: {ex.Message}");
                 return BadRequest(new { error = ex.Message });
             }
         }
 
         /// <summary>
-        /// Obține informațiile private ale utilizatorului curent
-        /// (email, rol, provider, etc.)
+        /// Obține informațiile private ale utilizatorului curent - FIXED VERSION
         /// </summary>
         [HttpGet("private")]
         public async Task<IActionResult> GetMyPrivateInfo()
@@ -125,6 +127,7 @@ namespace KDomBackend.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[ERROR] GetMyPrivateInfo: {ex.Message}");
                 return BadRequest(new { error = ex.Message });
             }
         }
@@ -143,13 +146,13 @@ namespace KDomBackend.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[ERROR] AddRecentlyViewedKdom: {ex.Message}");
                 return BadRequest(new { error = ex.Message });
             }
         }
 
         /// <summary>
         /// Verifică dacă utilizatorul curent poate actualiza un profil specific
-        /// Util pentru frontend-ul de admin
         /// </summary>
         [HttpGet("can-update/{targetUserId}")]
         public async Task<IActionResult> CanUpdateProfile(int targetUserId)
@@ -162,32 +165,41 @@ namespace KDomBackend.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[ERROR] CanUpdateProfile: {ex.Message}");
                 return BadRequest(new { error = ex.Message });
             }
         }
 
         /// <summary>
-        /// Obține statisticile detaliate ale utilizatorului curent (admin only)
+        /// Obține statisticile detaliate ale utilizatorului curent - REMOVED ADMIN RESTRICTION
         /// </summary>
         [HttpGet("detailed-stats")]
-        [Authorize(Roles = "admin")]
         public async Task<IActionResult> GetMyDetailedStats()
         {
             try
             {
                 var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+                // Check if user is admin or viewing their own stats
+                var isAdmin = await _userProfileService.IsUserAdminAsync(userId);
+                if (!isAdmin)
+                {
+                    // For non-admin users, return basic stats only
+                    return Ok(new { message = "Detailed stats available for administrators only" });
+                }
+
                 var stats = await _userProfileService.GetUserDetailedStatsAsync(userId, userId);
                 return Ok(stats);
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[ERROR] GetMyDetailedStats: {ex.Message}");
                 return BadRequest(new { error = ex.Message });
             }
         }
 
         /// <summary>
         /// Verifică dacă utilizatorul curent este admin
-        /// Util pentru frontend pentru a arăta/ascunde funcționalități
         /// </summary>
         [HttpGet("is-admin")]
         public async Task<IActionResult> IsCurrentUserAdmin()
@@ -200,6 +212,7 @@ namespace KDomBackend.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[ERROR] IsCurrentUserAdmin: {ex.Message}");
                 return BadRequest(new { error = ex.Message });
             }
         }
@@ -218,13 +231,13 @@ namespace KDomBackend.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[ERROR] IsCurrentUserAdminOrModerator: {ex.Message}");
                 return BadRequest(new { error = ex.Message });
             }
         }
 
         /// <summary>
         /// Endpoint pentru a obține lista ID-urilor K-Dom-urilor recent vizualizate
-        /// Util pentru sincronizare cu frontend storage
         /// </summary>
         [HttpGet("recently-viewed-ids")]
         public async Task<IActionResult> GetRecentlyViewedKDomIds()
@@ -237,6 +250,7 @@ namespace KDomBackend.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[ERROR] GetRecentlyViewedKDomIds: {ex.Message}");
                 return BadRequest(new { error = ex.Message });
             }
         }
@@ -259,6 +273,7 @@ namespace KDomBackend.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[ERROR] ValidateUpdatePermissions: {ex.Message}");
                 return BadRequest(new { error = ex.Message });
             }
         }

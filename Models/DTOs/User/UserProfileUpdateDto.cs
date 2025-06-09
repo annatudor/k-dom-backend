@@ -1,4 +1,5 @@
 ﻿using KDomBackend.Enums;
+using MongoDB.Bson.Serialization.Attributes;
 using System.ComponentModel.DataAnnotations;
 
 namespace KDomBackend.Models.DTOs.User
@@ -10,11 +11,10 @@ namespace KDomBackend.Models.DTOs.User
 
         [MaxLength(250)]
         public string Bio { get; set; } = string.Empty;
-        
+
+        [BsonRepresentation(MongoDB.Bson.BsonType.String)]
         public ProfileTheme ProfileTheme { get; set; } = ProfileTheme.Default;
 
-
-        [Url]
         public string AvatarUrl { get; set; } = string.Empty;
     }
 }

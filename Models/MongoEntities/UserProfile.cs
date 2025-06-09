@@ -6,6 +6,9 @@ namespace KDomBackend.Models.MongoEntities
 {
     public class UserProfile
     {
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string Id { get; set; } = string.Empty;
         [BsonRepresentation(BsonType.Int32)]
         public int UserId { get; set; }
 
