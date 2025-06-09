@@ -1,6 +1,7 @@
 ﻿using KDomBackend.Helpers;
 using KDomBackend.Models.DTOs.Common;
 using KDomBackend.Models.DTOs.Post;
+using KDomBackend.Models.MongoEntities;
 using KDomBackend.Repositories.Interfaces;
 using KDomBackend.Services.Interfaces;
 
@@ -13,6 +14,7 @@ namespace KDomBackend.Services.Implementations
         private readonly IFollowRepository _followRepository;
         private readonly IKDomFollowRepository _kdomFollowRepository;
         private readonly IKDomRepository _kdomRepository;
+        private readonly IUserProfileRepository _userProfileRepository;
 
 
         public PostReadService(IPostRepository repository,
@@ -22,7 +24,8 @@ namespace KDomBackend.Services.Implementations
             INotificationService notificationService,
             KDomTagHelper tagHelper,
             IKDomFollowRepository kdomFollowRepository,
-            IKDomRepository kdomRepository
+            IKDomRepository kdomRepository,
+            IUserProfileRepository userProfileRepository
             )
         {
             _repository = repository;
@@ -30,6 +33,7 @@ namespace KDomBackend.Services.Implementations
             _followRepository = followRepository;
             _kdomFollowRepository = kdomFollowRepository;
             _kdomRepository = kdomRepository;
+            _userProfileRepository = userProfileRepository;
         }
 
         public async Task<List<PostReadDto>> GetAllPostsAsync()
@@ -40,6 +44,8 @@ namespace KDomBackend.Services.Implementations
             foreach (var post in posts)
             {
                 var username = await _userService.GetUsernameByUserIdAsync(post.UserId);
+                var userProfile = await _userProfileRepository.GetProfileByUserIdAsync(post.UserId);
+                var avatarUrl = userProfile?.AvatarUrl ?? "";
 
                 result.Add(new PostReadDto
                 {
@@ -48,6 +54,7 @@ namespace KDomBackend.Services.Implementations
                     Tags = post.Tags,
                     UserId = post.UserId,
                     Username = username,
+                    UserAvatarUrl = avatarUrl,
                     CreatedAt = post.CreatedAt,
                     IsEdited = post.IsEdited,
                     EditedAt = post.EditedAt,
@@ -65,6 +72,8 @@ namespace KDomBackend.Services.Implementations
                 throw new Exception("Post not found.");
 
             var username = await _userService.GetUsernameByUserIdAsync(post.UserId);
+            var userProfile = await _userProfileRepository.GetProfileByUserIdAsync(post.UserId);
+            var avatarUrl = userProfile?.AvatarUrl ?? "";
 
             return new PostReadDto
             {
@@ -73,6 +82,7 @@ namespace KDomBackend.Services.Implementations
                 Tags = post.Tags,
                 UserId = post.UserId,
                 Username = username,
+                UserAvatarUrl = avatarUrl,
                 CreatedAt = post.CreatedAt,
                 IsEdited = post.IsEdited,
                 EditedAt = post.EditedAt,
@@ -84,6 +94,8 @@ namespace KDomBackend.Services.Implementations
         {
             var posts = await _repository.GetByUserIdAsync(userId);
             var username = await _userService.GetUsernameByUserIdAsync(userId);
+            var userProfile = await _userProfileRepository.GetProfileByUserIdAsync(userId);
+            var avatarUrl = userProfile?.AvatarUrl ?? "";
 
             return posts.Select(p => new PostReadDto
             {
@@ -92,6 +104,7 @@ namespace KDomBackend.Services.Implementations
                 Tags = p.Tags,
                 UserId = p.UserId,
                 Username = username,
+                UserAvatarUrl = avatarUrl,
                 CreatedAt = p.CreatedAt,
                 IsEdited = p.IsEdited,
                 EditedAt = p.EditedAt,
@@ -118,6 +131,8 @@ namespace KDomBackend.Services.Implementations
             foreach (var post in posts)
             {
                 var username = await _userService.GetUsernameByUserIdAsync(post.UserId);
+                var userProfile = await _userProfileRepository.GetProfileByUserIdAsync(post.UserId);
+                var avatarUrl = userProfile?.AvatarUrl ?? "";
 
                 result.Add(new PostReadDto
                 {
@@ -126,6 +141,7 @@ namespace KDomBackend.Services.Implementations
                     Tags = post.Tags,
                     UserId = post.UserId,
                     Username = username,
+                    UserAvatarUrl = avatarUrl,
                     CreatedAt = post.CreatedAt,
                     IsEdited = post.IsEdited,
                     EditedAt = post.EditedAt,
@@ -145,7 +161,8 @@ namespace KDomBackend.Services.Implementations
             foreach (var post in posts)
             {
                 var username = await _userService.GetUsernameByUserIdAsync(post.UserId);
-
+                var userProfile = await _userProfileRepository.GetProfileByUserIdAsync(post.UserId);
+                var avatarUrl = userProfile?.AvatarUrl ?? "";
                 result.Add(new PostReadDto
                 {
                     Id = post.Id,
@@ -153,6 +170,7 @@ namespace KDomBackend.Services.Implementations
                     Tags = post.Tags,
                     UserId = post.UserId,
                     Username = username,
+                    UserAvatarUrl = avatarUrl,
                     CreatedAt = post.CreatedAt,
                     IsEdited = post.IsEdited,
                     EditedAt = post.EditedAt,
@@ -171,12 +189,15 @@ namespace KDomBackend.Services.Implementations
             foreach (var post in posts)
             {
                 var username = await _userService.GetUsernameByUserIdAsync(post.UserId);
+                var userProfile = await _userProfileRepository.GetProfileByUserIdAsync(post.UserId);
+                var avatarUrl = userProfile?.AvatarUrl ?? "";
 
                 result.Add(new PostReadDto
                 {
                     Id = post.Id,
                     UserId = post.UserId,
                     Username = username ?? "unknown",
+                    UserAvatarUrl = avatarUrl,
                     ContentHtml = post.ContentHtml,
                     Tags = post.Tags,
                     CreatedAt = post.CreatedAt
@@ -198,12 +219,16 @@ namespace KDomBackend.Services.Implementations
             foreach (var post in posts)
             {
                 var username = await _userService.GetUsernameByUserIdAsync(post.UserId);
+                var userProfile = await _userProfileRepository.GetProfileByUserIdAsync(post.UserId);
+                var avatarUrl = userProfile?.AvatarUrl ?? "";
+
 
                 result.Add(new PostReadDto
                 {
                     Id = post.Id,
                     UserId = post.UserId,
                     Username = username ?? "unknown",
+                    UserAvatarUrl = avatarUrl,
                     ContentHtml = post.ContentHtml,
                     Tags = post.Tags,
                     CreatedAt = post.CreatedAt,

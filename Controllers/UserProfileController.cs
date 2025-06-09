@@ -84,12 +84,33 @@ namespace KDomBackend.Controllers
             try
             {
                 var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                Console.WriteLine($"[DEBUG] GetRecentlyViewedKdoms called for user {userId}");
+
+                // Obținem ID-urile
+                var ids = await _userProfileService.GetRecentlyViewedKDomIdsAsync(userId);
+                Console.WriteLine($"[DEBUG] Found {ids.Count} recently viewed IDs: [{string.Join(", ", ids)}]");
+
+                if (!ids.Any())
+                {
+                    Console.WriteLine($"[DEBUG] No recently viewed KDoms for user {userId}");
+                    return Ok(new List<object>());
+                }
+
+                // Obținem K-DOM-urile complete
                 var result = await _kdomReadService.GetRecentlyViewedKdomsAsync(userId);
+                Console.WriteLine($"[DEBUG] Converted to {result.Count} KDom objects");
+
+                foreach (var kdom in result)
+                {
+                    Console.WriteLine($"[DEBUG] KDom: {kdom.Id} - {kdom.Title}");
+                }
+
                 return Ok(result);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[ERROR] GetRecentlyViewedKdoms: {ex.Message}");
+                Console.WriteLine($"[ERROR] Stack trace: {ex.StackTrace}");
                 return BadRequest(new { error = ex.Message });
             }
         }
@@ -141,12 +162,27 @@ namespace KDomBackend.Controllers
             try
             {
                 var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                Console.WriteLine($"[DEBUG] AddRecentlyViewedKdom called: user {userId}, kdom {kdomId}");
+
+                // Validăm că K-DOM-ul există
+                var kdom = await _kdomReadService.GetKDomByIdAsync(kdomId);
+                if (kdom == null)
+                {
+                    Console.WriteLine($"[ERROR] KDom {kdomId} not found");
+                    return NotFound(new { error = "K-Dom not found." });
+                }
+
+                Console.WriteLine($"[DEBUG] K-Dom found: {kdom.Title}");
+
                 await _userProfileService.AddRecentlyViewedKDomAsync(userId, kdomId);
+                Console.WriteLine($"[DEBUG] Successfully added K-Dom {kdomId} to recently viewed");
+
                 return Ok(new { message = "K-Dom added to recently viewed." });
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[ERROR] AddRecentlyViewedKdom: {ex.Message}");
+                Console.WriteLine($"[ERROR] Stack trace: {ex.StackTrace}");
                 return BadRequest(new { error = ex.Message });
             }
         }
@@ -245,7 +281,11 @@ namespace KDomBackend.Controllers
             try
             {
                 var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                Console.WriteLine($"[DEBUG] GetRecentlyViewedKDomIds called for user {userId}");
+
                 var ids = await _userProfileService.GetRecentlyViewedKDomIdsAsync(userId);
+                Console.WriteLine($"[DEBUG] Found {ids.Count} recently viewed IDs");
+
                 return Ok(new { kdomIds = ids });
             }
             catch (Exception ex)

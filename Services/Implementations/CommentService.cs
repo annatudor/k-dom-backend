@@ -15,14 +15,16 @@ namespace KDomBackend.Services.Implementations
         private readonly IUserService _userService;
         private readonly IAuditLogRepository _auditLogRepository;
         private readonly INotificationService _notificationService;
+        private readonly IUserProfileRepository _userProfileRepository;
 
         public CommentService(ICommentRepository repository, IUserService userService, IAuditLogRepository auditLogRepository,
-        INotificationService notificationService)
+        INotificationService notificationService, IUserProfileRepository userProfileRepository)
         {
             _repository = repository;
             _userService = userService;
             _auditLogRepository = auditLogRepository;
             _notificationService = notificationService;
+            _userProfileRepository = userProfileRepository;
         }
 
         public async Task CreateCommentAsync(CommentCreateDto dto, int userId)
@@ -81,6 +83,8 @@ namespace KDomBackend.Services.Implementations
             foreach (var comment in comments)
             {
                 var username = await _userService.GetUsernameByUserIdAsync(comment.UserId);
+                var userProfile = await _userProfileRepository.GetProfileByUserIdAsync(comment.UserId);
+                var avatarUrl = userProfile?.AvatarUrl ?? "";
 
                 result.Add(new CommentReadDto
                 {
@@ -89,6 +93,7 @@ namespace KDomBackend.Services.Implementations
                     TargetId = comment.TargetId,
                     UserId = comment.UserId,
                     Username = username ?? "unknown",
+                    UserAvatarUrl = avatarUrl,
                     Text = comment.Text,
                     ParentCommentId = comment.ParentCommentId,
                     CreatedAt = comment.CreatedAt,

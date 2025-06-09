@@ -19,6 +19,7 @@ namespace KDomBackend.Services.Implementations
         private readonly IKDomFollowRepository _kdomFollowRepository;
         private readonly IViewTrackingService _viewTrackingService;
 
+
         public UserProfileService(
             IUserRepository userRepository,
             IUserProfileRepository profileRepository,
@@ -464,15 +465,54 @@ namespace KDomBackend.Services.Implementations
 
         public async Task AddRecentlyViewedKDomAsync(int userId, string kdomId)
         {
-            if (string.IsNullOrEmpty(kdomId))
-                throw new ArgumentException("K-Dom ID cannot be null or empty.");
+            try
+            {
+                
 
-            await _profileRepository.AddRecentlyViewedKDomAsync(userId, kdomId);
+                if (string.IsNullOrEmpty(kdomId))
+                    throw new ArgumentException("K-Dom ID cannot be null or empty.", nameof(kdomId));
+
+                if (userId <= 0)
+                    throw new ArgumentException("User ID must be positive.", nameof(userId));
+
+                // Verifică dacă K-Dom-ul există
+                var kdom = await _kdomRepository.GetByIdAsync(kdomId);
+                if (kdom == null)
+                {
+                    throw new ArgumentException($"K-Dom with ID {kdomId} not found.", nameof(kdomId));
+                }
+
+                // Verifică dacă utilizatorul există
+                var user = await _userRepository.GetByIdAsync(userId);
+                if (user == null)
+                {
+                    throw new ArgumentException($"User with ID {userId} not found.", nameof(userId));
+                }
+
+                await _profileRepository.AddRecentlyViewedKDomAsync(userId, kdomId);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
         }
 
         public async Task<List<string>> GetRecentlyViewedKDomIdsAsync(int userId)
         {
-            return await _profileRepository.GetRecentlyViewedKDomIdsAsync(userId);
+            try
+            {
+
+                if (userId <= 0)
+                    throw new ArgumentException("User ID must be positive.", nameof(userId));
+
+                var ids = await _profileRepository.GetRecentlyViewedKDomIdsAsync(userId);
+
+                return ids;
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
         }
 
         public async Task<bool> CanUserUpdateProfileAsync(int currentUserId, int targetUserId)

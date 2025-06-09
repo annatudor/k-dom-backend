@@ -6,7 +6,8 @@ public class CommentReadDto
     public CommentTargetType TargetType { get; set; }
     public string TargetId { get; set; } = string.Empty;
     public int UserId { get; set; }
-    public string Username { get; set; } = string.Empty; 
+    public string Username { get; set; } = string.Empty;
+    public string UserAvatarUrl { get; set; } = string.Empty;
     public string Text { get; set; } = string.Empty;
     public string? ParentCommentId { get; set; }
     public DateTime CreatedAt { get; set; }

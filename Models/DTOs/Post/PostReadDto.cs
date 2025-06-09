@@ -7,10 +7,12 @@
         public List<string> Tags { get; set; } = new();
         public int UserId { get; set; }
         public string Username { get; set; } = string.Empty;
+        public string UserAvatarUrl { get; set; } = string.Empty;
         public int LikeCount { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsEdited { get; set; }
         public DateTime? EditedAt { get; set; }
+
     }
 }
 
