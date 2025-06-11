@@ -10,7 +10,7 @@ namespace KDomBackend.Repositories.Interfaces
         Task<List<string>> GetFollowedKDomIdsAsync(int userId);
         Task<Dictionary<string, int>> CountRecentFollowsAsync(int days = 7);
         Task<List<string>> GetFollowedSlugsAsync(int userId);
-        Task<int> CountFollowersAsync(string kdomId);
+        Task<int> GetFollowersCountAsync(string kdomId);
 
     }
 }

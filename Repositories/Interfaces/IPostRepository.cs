@@ -35,6 +35,8 @@ namespace KDomBackend.Repositories.Interfaces
         Task<int> CountSearchPostsByTagAsync(string tag, string? contentQuery = null,
                 string? username = null, bool? onlyLiked = null, int? lastDays = null);
 
+        Task<int> GetTotalPostsCountAsync();
+        Task<int> GetPostCountByTagAsync(string tag);
 
     }
 }

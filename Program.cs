@@ -123,6 +123,7 @@ builder.Services.AddScoped<IPostReadService, PostReadService>();
 builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 builder.Services.AddScoped<IUserAdminService, UserAdminService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IStatisticsService, StatisticsService>();
 builder.Services.AddScoped<IKDomPermissionService, KDomPermissionService>();
 builder.Services.AddScoped<IKDomDiscussionService, KDomDiscussionService>();
 

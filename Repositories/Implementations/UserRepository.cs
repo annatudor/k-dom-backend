@@ -421,5 +421,11 @@ namespace KDomBackend.Repositories.Implementations
             return await conn.QueryFirstOrDefaultAsync<DateTime?>(sql, new { UserId = userId });
         }
 
+        public async Task<int> GetTotalUsersCountAsync()
+        {
+            using var conn = _context.CreateConnection();
+            return await conn.QuerySingleAsync<int>("SELECT COUNT(*) FROM users");
+        }
+
     }
 }

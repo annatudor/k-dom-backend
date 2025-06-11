@@ -384,5 +384,15 @@ namespace KDomBackend.Repositories.Implementations
             return (int)await _collection.CountDocumentsAsync(combinedFilter);
         }
 
+        public async Task<int> GetTotalPostsCountAsync()
+        {
+            return (int)await _collection.CountDocumentsAsync(Builders<Post>.Filter.Empty);
+        }
+
+        public async Task<int> GetPostCountByTagAsync(string tag)
+        {
+            var filter = Builders<Post>.Filter.AnyEq(p => p.Tags, tag.ToLower());
+            return (int)await _collection.CountDocumentsAsync(filter);
+        }
     }
 }

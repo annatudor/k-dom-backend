@@ -40,7 +40,7 @@ namespace KDomBackend.Repositories.Interfaces
         Task<DateTime?> GetLastLoginAsync(int userId);
 
         Task<User?> GetByUsernameOrEmailAsync(string identifier);
-
+        Task<int> GetTotalUsersCountAsync();
 
     }
 }
