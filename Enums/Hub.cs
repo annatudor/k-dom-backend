@@ -10,7 +10,9 @@ namespace KDomBackend.Enums
         Kpop,
         Gaming,
         Literature,
-        Fashion
+        Fashion, 
+        Food,
+        Beauty
     }
 
 }
