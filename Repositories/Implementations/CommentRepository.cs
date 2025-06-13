@@ -265,10 +265,9 @@ namespace KDomBackend.Repositories.Implementations
             return (int)await _collection.CountDocumentsAsync(Builders<Comment>.Filter.Empty);
         }
 
-        // ADAUGĂ în CommentRepository.cs - metoda nouă pentru comments pe K-Dom
-        public async Task<int> GetCommentsCountByKDomAsync(string kdomId)
+        public async Task<int> GetCommentsCountByKDomAsync(string targetId)
         {
-            var filter = Builders<Comment>.Filter.Eq(c => c.KDomId, kdomId);
+            var filter = Builders<Comment>.Filter.Eq(c => c.TargetId, targetId);
             return (int)await _collection.CountDocumentsAsync(filter);
         }
 

@@ -23,7 +23,6 @@ namespace KDomBackend.Data
         public IMongoCollection<UserProfile> UserProfiles => _database.GetCollection<UserProfile>("user_profiles");
         public IMongoCollection<Notification> Notifications => _database.GetCollection<Notification>("notifications");
         public IMongoCollection<KDomFollow> KDomFollows => _database.GetCollection<KDomFollow>("kdom_follows");
-        public IMongoCollection<ViewTracking> ViewTrackings => _database.GetCollection<ViewTracking>("view_trackings");
 
 
         public IMongoCollection<KDomEdit> KDomEdits => _database.GetCollection<KDomEdit>("kdom_edits");

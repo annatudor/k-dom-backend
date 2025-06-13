@@ -2,7 +2,6 @@
 {
     public class UserDetailedStatsDto
     {
-        public int TotalKDomViews { get; set; }
         public int TotalKDomEdits { get; set; }
         public int TotalLikesReceived { get; set; }
         public int TotalLikesGiven { get; set; }

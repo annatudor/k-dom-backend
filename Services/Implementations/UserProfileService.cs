@@ -17,7 +17,7 @@ namespace KDomBackend.Services.Implementations
         private readonly IPostRepository _postRepository;
         private readonly ICommentRepository _commentRepository;
         private readonly IKDomFollowRepository _kdomFollowRepository;
-        private readonly IViewTrackingService _viewTrackingService;
+
 
 
         public UserProfileService(
@@ -27,8 +27,7 @@ namespace KDomBackend.Services.Implementations
             IKDomRepository kdomRepository,
             IPostRepository postRepository,
             ICommentRepository commentRepository,
-            IKDomFollowRepository kdomFollowRepository,
-            IViewTrackingService viewTrackingService)
+            IKDomFollowRepository kdomFollowRepository)
         {
             _userRepository = userRepository;
             _profileRepository = profileRepository;
@@ -37,7 +36,6 @@ namespace KDomBackend.Services.Implementations
             _postRepository = postRepository;
             _commentRepository = commentRepository;
             _kdomFollowRepository = kdomFollowRepository;
-            _viewTrackingService = viewTrackingService;
         }
 
         /// <summary>
@@ -199,7 +197,6 @@ namespace KDomBackend.Services.Implementations
                 // Initialize with safe defaults
                 var stats = new UserDetailedStatsDto
                 {
-                    TotalKDomViews = 0,
                     TotalKDomEdits = 0,
                     TotalLikesReceived = 0,
                     TotalLikesGiven = 0,
@@ -210,18 +207,7 @@ namespace KDomBackend.Services.Implementations
                 };
 
                 // Safely get each statistic with try-catch
-                try
-                {
-                    if (_viewTrackingService != null)
-                    {
-                        stats.TotalKDomViews = await _viewTrackingService.GetUserTotalViewsAsync(userId);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[WARNING] Failed to get view stats: {ex.Message}");
-                    stats.TotalKDomViews = 0;
-                }
+               
 
                 try
                 {
