@@ -55,6 +55,6 @@ namespace KDomBackend.Repositories.Interfaces
         Task<TimeSpan> GetAverageProcessingTimeAsync();
         Task<DateTime?> GetModerationDateAsync(string kdomId);
         Task SetModeratorAsync(string kdomId, int moderatorUserId);
-
+        Task<List<KDom>> GetApprovedKDomsAsync();
     }
 }

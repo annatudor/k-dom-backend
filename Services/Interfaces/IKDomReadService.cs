@@ -1,4 +1,5 @@
 ﻿using KDomBackend.Models.DTOs.Collaboration;
+using KDomBackend.Models.DTOs.Common;
 using KDomBackend.Models.DTOs.KDom;
 
 namespace KDomBackend.Services.Interfaces
@@ -29,7 +30,7 @@ namespace KDomBackend.Services.Interfaces
         Task<bool> ExistsByTitleOrSlugAsync(string title);
         Task<List<string>> GetSimilarTitlesAsync(string title);
 
-
+        Task<PagedResult<ExploreKDomDto>> GetKDomsForExploreAsync(ExploreFilterDto filters);
 
     }
 }

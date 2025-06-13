@@ -1,8 +1,11 @@
 ﻿using KDomBackend.Models.DTOs.Collaboration;
+using KDomBackend.Models.DTOs.Common;
 using KDomBackend.Models.DTOs.KDom;
 using KDomBackend.Repositories.Interfaces;
 using KDomBackend.Services.Interfaces;
 using KDomBackend.Services.Validation;
+using KDomBackend.Enums;
+using KDomBackend.Models.MongoEntities;
 
 namespace KDomBackend.Services.Implementations
 {
@@ -461,6 +464,80 @@ namespace KDomBackend.Services.Implementations
             var user = await _userService.GetUserByIdAsync(userId);
             return user?.Role == "admin" || user?.Role == "moderator";
         }
+        public async Task<List<KDom>> GetApprovedKDomsAsync()
+        {
+            return await _kdomRepository.GetApprovedKDomsAsync();
+        }
+        public async Task<PagedResult<ExploreKDomDto>> GetKDomsForExploreAsync(ExploreFilterDto filters)
+        {
+            var approvedKdoms = await GetApprovedKDomsAsync();
+            var query = approvedKdoms.AsQueryable();
 
+            // Filtrare după hub
+            if (!string.IsNullOrEmpty(filters.Hub) && Enum.TryParse<Hub>(filters.Hub, out var hubEnum))
+            {
+                query = query.Where(k => k.Hub == hubEnum);
+            }
+
+            // Căutare
+            if (!string.IsNullOrEmpty(filters.Search))
+            {
+                query = query.Where(k =>
+                    k.Title.Contains(filters.Search, StringComparison.OrdinalIgnoreCase) ||
+                    k.Description.Contains(filters.Search, StringComparison.OrdinalIgnoreCase));
+            }
+
+            // Sortare doar cu ce avem în entitatea KDom
+            query = filters.SortBy switch
+            {
+                "alphabetical" => query.OrderBy(k => k.Title),
+                _ => query.OrderByDescending(k => k.CreatedAt)
+            };
+
+            var totalCount = query.Count();
+            var totalPages = (int)Math.Ceiling(totalCount / (double)filters.PageSize);
+
+            var pagedKdoms = query
+                .Skip((filters.Page - 1) * filters.PageSize)
+                .Take(filters.PageSize)
+                .ToList();
+
+            var items = new List<ExploreKDomDto>();
+
+            foreach (var kdom in pagedKdoms)
+            {
+                // Obține datele suplimentare folosind serviciile existente
+                var followersCount = await _kdomFollowRepository.GetFollowersCountAsync(kdom.Id);
+                var username = await _userService.GetUsernameByUserIdAsync(kdom.UserId);
+                // Pentru username, poți folosi UserProfileService sau să lași "Unknown"
+
+
+                items.Add(new ExploreKDomDto
+                {
+                    Id = kdom.Id,
+                    Title = kdom.Title,
+                    Slug = kdom.Slug,
+                    Description = kdom.Description,
+                    Hub = kdom.Hub,
+                    Language = kdom.Language,
+                    Theme = kdom.Theme,
+                    IsForKids = kdom.IsForKids,
+                    CreatedAt = kdom.CreatedAt,
+                    AuthorUsername = username,
+                    FollowersCount = followersCount,
+                });
+            }
+
+            return new PagedResult<ExploreKDomDto>
+            {
+                TotalCount = totalCount,
+                PageSize = filters.PageSize,
+                CurrentPage = filters.Page,
+                TotalPages = totalPages,
+                Items = items
+            };
+        }
     }
+
 }
+

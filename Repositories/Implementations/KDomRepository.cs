@@ -1,4 +1,5 @@
 ﻿using KDomBackend.Data;
+using KDomBackend.Models.DTOs.Moderation;
 using KDomBackend.Models.MongoEntities;
 using KDomBackend.Repositories.Interfaces;
 using MongoDB.Bson;
@@ -621,6 +622,15 @@ namespace KDomBackend.Repositories.Implementations
                 .Set(k => k.ModeratedByUserId, moderatorUserId);
 
             await _collection.UpdateOneAsync(k => k.Id == kdomId, update);
+        }
+        public async Task<List<KDom>> GetApprovedKDomsAsync()
+        {
+            var filter = Builders<KDom>.Filter.Eq(k => k.IsApproved, true);
+
+            return await _context.KDoms
+                .Find(filter)
+                .SortByDescending(k => k.CreatedAt)
+                .ToListAsync();
         }
     }
 }

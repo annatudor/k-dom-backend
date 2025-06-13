@@ -8,6 +8,7 @@ using KDomBackend.Repositories.Interfaces;
 using KDomBackend.Enums;
 using KDomBackend.Models.DTOs.Collaboration;
 using KDomBackend.Services.Implementations;
+using KDomBackend.Models.DTOs.Common;
 
 namespace KDomBackend.Controllers
 {
@@ -969,6 +970,12 @@ namespace KDomBackend.Controllers
             }
         }
 
+        [HttpGet("explore")]
+        public async Task<ActionResult<PagedResult<ExploreKDomDto>>> ExploreKDoms([FromQuery] ExploreFilterDto filters)
+        {
+            var result = await _kdomReadService.GetKDomsForExploreAsync(filters);
+            return Ok(result);
+        }
     }
 
 }
